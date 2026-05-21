@@ -444,7 +444,7 @@ define([], function () { 'use strict';
         },
 
         getSignatureId: function() {
-            return this.props ? this.props.getResult().internalId : '';
+            return this.props ? this.props.get_FormId() : '';
         },
 
         getKey: function() {
