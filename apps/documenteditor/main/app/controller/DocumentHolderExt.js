@@ -299,6 +299,14 @@ define([], function () {
             view.menuImageWrap.menu.on('item:click', _.bind(me.onImgWrap, me));
             view.menuImageAdvanced.on('click', _.bind(me.onImgAdvanced, me));
             view.menuOriginalSize.on('click', _.bind(me.onImgOriginalSize, me));
+            view.menuHLCut.on('click', _.bind(me.onCutCopyPaste, me));
+            view.menuHLCopy.on('click', _.bind(me.onCutCopyPaste, me));
+            view.menuHLPaste.on('click', _.bind(me.onCutCopyPaste, me));
+            view.menuHLPrint.on('click', _.bind(me.onPrintSelection, me));
+            view.menuHLInsertCaption.on('click', _.bind(me.onInsertCaption, me));
+            view.menuAddHyperlinkHL.on('click', _.bind(me.addHyperlink, me));
+            view.menuEditHyperlinkHL.on('click', _.bind(me.editHyperlink, me));
+            view.menuRemoveHyperlinkHL.on('click', _.bind(me.onRemoveHyperlink, me));
             view.menuImgReplace.menu.on('item:click', _.bind(me.onImgReplace, me));
             view.menuImgEditPoints.on('click', _.bind(me.onImgEditPoints, me));
             view.mnuTableMerge.on('click', _.bind(me.onTableMerge, me));
@@ -418,6 +426,10 @@ define([], function () {
                     menu_props.mathProps = {};
                     menu_props.mathProps.value = elValue;
                     me.documentHolder._currentMathObj = elValue;
+                } else if (Asc.c_oAscTypeSelectElement.HorizontalLine == elType) {
+                    menu_to_show = documentHolder.hlMenu;
+                    menu_props.horizontalRuleProps = elValue;
+                    noobject = false;
                 }
             }
             return (!noobject) ? {menu_to_show: menu_to_show, menu_props: menu_props} : null;
