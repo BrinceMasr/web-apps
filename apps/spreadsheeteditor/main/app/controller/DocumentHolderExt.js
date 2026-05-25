@@ -1,33 +1,36 @@
 /*
- * (c) Copyright Ascensio System SIA 2010-2024
+ * Copyright (C) Ascensio System SIA, 2009-2026
  *
  * This program is a free software product. You can redistribute it and/or
  * modify it under the terms of the GNU Affero General Public License (AGPL)
- * version 3 as published by the Free Software Foundation. In accordance with
- * Section 7(a) of the GNU AGPL its Section 15 shall be amended to the effect
- * that Ascensio System SIA expressly excludes the warranty of non-infringement
- * of any third-party rights.
+ * version 3 as published by the Free Software Foundation, together with the
+ * additional terms provided in the LICENSE file.
  *
  * This program is distributed WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
- * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. For
+ * details, see the GNU AGPL at: https://www.gnu.org/licenses/agpl-3.0.html
  *
- * You can contact Ascensio System SIA at 20A-6 Ernesta Birznieka-Upish
- * street, Riga, Latvia, EU, LV-1050.
+ * You can contact Ascensio System SIA by email at info@onlyoffice.com
+ * or by postal mail at 20A-6 Ernesta Birznieka-Upisha Street, Riga,
+ * LV-1050, Latvia, European Union.
  *
- * The  interactive user interfaces in modified source and object code versions
- * of the Program must display Appropriate Legal Notices, as required under
+ * The interactive user interfaces in modified versions of the Program
+ * are required to display Appropriate Legal Notices in accordance with
  * Section 5 of the GNU AGPL version 3.
  *
- * Pursuant to Section 7(b) of the License you must retain the original Product
- * logo when distributing the program. Pursuant to Section 7(e) we decline to
- * grant you any rights under trademark law for use of our trademarks.
+ * No trademark rights are granted under this License.
  *
- * All the Product's GUI elements, including illustrations and icon sets, as
- * well as technical writing content are licensed under the terms of the
- * Creative Commons Attribution-ShareAlike 4.0 International. See the License
- * terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
+ * All non-code elements of the Product, including illustrations,
+ * icon sets, and technical writing content, are licensed under the
+ * Creative Commons Attribution-ShareAlike 4.0 International License:
+ * https://creativecommons.org/licenses/by-sa/4.0/legalcode
  *
+ * This license applies only to such non-code elements and does not
+ * modify or replace the licensing terms applicable to the Program's
+ * source code, which remains licensed under the GNU Affero General
+ * Public License v3.
+ *
+ * SPDX-License-Identifier: AGPL-3.0-only
  */
 /**
  *  DocumentHolderExt.js
@@ -331,8 +334,7 @@ define([], function () {
                             }
                         })).show();
                     }
-                } else
-                    Common.component.Analytics.trackEvent('ToolBar', 'Copy Warning');
+                }
             }
             Common.NotificationCenter.trigger('edit:complete', me.documentHolder);
         };
@@ -349,7 +351,6 @@ define([], function () {
                 }
 
                 Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                Common.component.Analytics.trackEvent('DocumentHolder', 'Insert Entire');
             }
         };
 
@@ -358,7 +359,6 @@ define([], function () {
                 this.api.asc_insertCells(item.value);
 
                 Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                Common.component.Analytics.trackEvent('DocumentHolder', 'Insert Cells');
             }
         };
 
@@ -374,7 +374,6 @@ define([], function () {
                 }
 
                 Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                Common.component.Analytics.trackEvent('DocumentHolder', 'Delete Entire');
             }
         };
 
@@ -383,7 +382,6 @@ define([], function () {
                 this.api.asc_deleteCells(item.value);
 
                 Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                Common.component.Analytics.trackEvent('DocumentHolder', 'Delete Cells');
             }
         };
 
@@ -412,7 +410,6 @@ define([], function () {
                                     this.api.asc_sortColFilter(item.value, '', undefined, (item.value==Asc.c_oAscSortOptions.ByColorFill) ? this.documentHolder.ssMenu.cellColor : this.documentHolder.ssMenu.fontColor, btn == 'expand');
                                 }
                                 Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                                Common.component.Analytics.trackEvent('DocumentHolder', 'Sort Cells');
                             }, this)
                         };
                         Common.UI.alert(config);
@@ -427,7 +424,6 @@ define([], function () {
                             callback: _.bind(function(btn){
                                 (btn == 'yes') && this.api.asc_sortColFilter(item.value, '', undefined, (item.value==Asc.c_oAscSortOptions.ByColorFill) ? this.documentHolder.ssMenu.cellColor : this.documentHolder.ssMenu.fontColor, false);
                                 Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                                Common.component.Analytics.trackEvent('DocumentHolder', 'Sort Cells');
                             }, this)
                         };
                         Common.UI.alert(config);
@@ -436,7 +432,6 @@ define([], function () {
                     case Asc.c_oAscSelectionSortExpand.notExpandAndNotShowMessage:
                         this.api.asc_sortColFilter(item.value, '', undefined, (item.value==Asc.c_oAscSortOptions.ByColorFill) ? this.documentHolder.ssMenu.cellColor : this.documentHolder.ssMenu.fontColor, res === Asc.c_oAscSelectionSortExpand.expandAndNotShowMessage);
                         Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                        Common.component.Analytics.trackEvent('DocumentHolder', 'Sort Cells');
                         break;
                 }
             }
@@ -469,7 +464,6 @@ define([], function () {
                 this.api.asc_applyAutoFilterByType(autoFilterObject);
 
                 Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                Common.component.Analytics.trackEvent('DocumentHolder', 'Filter Cells');
             }
         };
 
@@ -864,7 +858,6 @@ define([], function () {
                     this.api.asc_emptyCells(item.value, item.value == Asc.c_oAscCleanOptions.All && !this.permissions.canDeleteComments);
 
                 Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                Common.component.Analytics.trackEvent('DocumentHolder', 'Clear');
             }
         };
 
@@ -873,7 +866,6 @@ define([], function () {
                 this.api.asc_changeSelectionFormatTable(this.documentHolder.ssMenu.formatTableName, item.value);
 
                 Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                Common.component.Analytics.trackEvent('DocumentHolder', 'Select Table');
             }
         };
 
@@ -882,7 +874,6 @@ define([], function () {
                 this.api.asc_insertCellsInTable(this.documentHolder.ssMenu.formatTableName, item.value);
 
                 Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                Common.component.Analytics.trackEvent('DocumentHolder', 'Insert to Table');
             }
         };
 
@@ -891,7 +882,6 @@ define([], function () {
                 this.api.asc_deleteCellsInTable(this.documentHolder.ssMenu.formatTableName, item.value);
 
                 Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                Common.component.Analytics.trackEvent('DocumentHolder', 'Delete from Table');
             }
         };
 
@@ -951,7 +941,6 @@ define([], function () {
                 });
             }
 
-            Common.component.Analytics.trackEvent('DocumentHolder', 'Add Hyperlink');
         };
 
         dh.onDelHyperlink = function(item) {
@@ -963,7 +952,6 @@ define([], function () {
                 this.api.asc_removeHyperlink();
 
                 Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                Common.component.Analytics.trackEvent('DocumentHolder', 'Remove Hyperlink');
             }
         };
 
@@ -1037,7 +1025,6 @@ define([], function () {
             var handlerDlg = function(result, settings) {
                 if (result == 'ok' && settings) {
                     me.api.asc_setDefinedNames(settings);
-                    Common.component.Analytics.trackEvent('DocumentHolder', 'New Named Range');
                 }
                 Common.NotificationCenter.trigger('edit:complete', me.documentHolder);
             };
@@ -1058,19 +1045,16 @@ define([], function () {
                     this.api.asc_setSelectedDrawingObjectLayer(item.value);
 
                     Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                    Common.component.Analytics.trackEvent('DocumentHolder', 'Arrange');
                 } else if (item.options.type == 'group') {
                     this.api[(item.value == 'grouping') ? 'asc_groupGraphicsObjects' : 'asc_unGroupGraphicsObjects']();
 
                     Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                    Common.component.Analytics.trackEvent('DocumentHolder', (item.value == 'grouping') ? 'Grouping' : 'Ungrouping');
                 } else if (item.options.type == 'rotate') {
                     var properties = new Asc.asc_CImgProperty();
                     properties.asc_putRotAdd((item.value==1 ? 90 : 270) * 3.14159265358979 / 180);
                     this.api.asc_setGraphicObjectProps(properties);
 
                     Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                    Common.component.Analytics.trackEvent('DocumentHolder', 'Rotate');
                 } else if (item.options.type == 'flip') {
                     var properties = new Asc.asc_CImgProperty();
                     if (item.value==1)
@@ -1080,7 +1064,6 @@ define([], function () {
                     this.api.asc_setGraphicObjectProps(properties);
 
                     Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                    Common.component.Analytics.trackEvent('DocumentHolder', 'Flip');
                 }
             }
         };
@@ -1112,15 +1095,12 @@ define([], function () {
                 if (item.value>-1 && item.value < 6) {
                     this.api.asc_setSelectedDrawingObjectAlign(item.value);
                     Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                    Common.component.Analytics.trackEvent('DocumentHolder', 'Objects Align');
                 } else if (item.value == 6) {
                     this.api.asc_DistributeSelectedDrawingObjectHor();
                     Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                    Common.component.Analytics.trackEvent('DocumentHolder', 'Distribute');
                 } else if (item.value == 7){
                     this.api.asc_DistributeSelectedDrawingObjectVer();
                     Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                    Common.component.Analytics.trackEvent('DocumentHolder', 'Distribute');
                 }
             }
         };
@@ -1130,7 +1110,6 @@ define([], function () {
             if (item && item.value) {
                 me.api.asc_mergeSelectedShapes(item.value);
                 Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                Common.component.Analytics.trackEvent('DocumentHolder', 'Shapes Merge');
             }
         };
 
@@ -1149,7 +1128,6 @@ define([], function () {
                 this.api.asc_setGraphicObjectProps(properties);
 
                 Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                Common.component.Analytics.trackEvent('DocumentHolder', 'Paragraph Vertical Align');
             }
         };
 
@@ -1161,7 +1139,6 @@ define([], function () {
                 this.api.asc_setGraphicObjectProps(properties);
 
                 Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                Common.component.Analytics.trackEvent('DocumentHolder', 'Text Direction');
             }
         };
 
@@ -1170,7 +1147,6 @@ define([], function () {
                 if (item.options.value == -1) {
                     this.api.asc_setListType(0, item.options.value);
                     Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                    Common.component.Analytics.trackEvent('DocumentHolder', 'List Type');
                 } else if (item.options.value == 'settings') {
                     var me      = this,
                         props;
@@ -1240,7 +1216,6 @@ define([], function () {
                 this.documentHolder.textInShapeMenu.hide();
 
             Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-            Common.component.Analytics.trackEvent('DocumentHolder', 'List Type');
         };
 
         dh.onTextAdvanced = function(item) {
@@ -1254,7 +1229,6 @@ define([], function () {
                         if (me.api) {
                             me.api.asc_setGraphicObjectProps(value.paragraphProps);
 
-                            Common.component.Analytics.trackEvent('DocumentHolder', 'Apply advanced paragraph settings');
                         }
                     }
                     Common.NotificationCenter.trigger('edit:complete', me);
@@ -1273,7 +1247,6 @@ define([], function () {
                         if (me.api) {
                             me.api.asc_setGraphicObjectProps(value.shapeProps);
 
-                            Common.component.Analytics.trackEvent('DocumentHolder', 'Apply advanced shape settings');
                         }
                     }
                     Common.NotificationCenter.trigger('edit:complete', me);
@@ -1292,7 +1265,6 @@ define([], function () {
                         if (me.api) {
                             me.api.asc_setGraphicObjectProps(value.imageProps);
 
-                            Common.component.Analytics.trackEvent('DocumentHolder', 'Apply advanced image settings');
                         }
                     }
                     Common.NotificationCenter.trigger('edit:complete', me);
@@ -1312,7 +1284,6 @@ define([], function () {
                         if (me.api) {
                             me.api.asc_setGraphicObjectProps(value.imageProps);
 
-                            Common.component.Analytics.trackEvent('DocumentHolder', 'Apply slicer settings');
                         }
                     }
                     Common.NotificationCenter.trigger('edit:complete', me);
@@ -3990,7 +3961,6 @@ define([], function () {
                         if (me.chartProps) {
                             me.updateChartElementMenu(me.documentHolder.menuChartElement.menu, me.chartProps);
                         }
-                        Common.UI.TooltipManager.closeTip('chartElements');
                     });
                 }
 
@@ -4015,7 +3985,6 @@ define([], function () {
                         btnLeft = leftSide - 32; 
                     } else {
                         chartContainer.hide();
-                        Common.UI.TooltipManager.closeTip('chartElements');
                         return;
                     }
                 } else if (me.isRtl) {
@@ -4025,7 +3994,6 @@ define([], function () {
                         btnLeft = rightSide; 
                     } else {
                         chartContainer.hide();
-                        Common.UI.TooltipManager.closeTip('chartElements');
                         return;
                     }
                 } else {
@@ -4035,7 +4003,6 @@ define([], function () {
                         btnLeft = leftSide + 18; 
                     } else {
                         chartContainer.hide();
-                        Common.UI.TooltipManager.closeTip('chartElements');
                         return;
                     }
                 }
@@ -4046,7 +4013,6 @@ define([], function () {
                     var chartBottom = y + height;
                     if (chartBottom < 40) { 
                         chartContainer.hide();
-                        Common.UI.TooltipManager.closeTip('chartElements');
                         return;
                     }
                 }
@@ -4055,15 +4021,10 @@ define([], function () {
                     left: btnLeft + 'px',
                     top: btnTop + 'px'
                 }).show();
-                setTimeout(function (){
-                    Common.UI.TooltipManager.showTip('chartElements');
-                    Common.UI.TooltipManager.applyPlacement('chartElements');
-                }, 100);
         
                 me.disableChartElementButton();
             } else {
                 chartContainer.hide();
-                Common.UI.TooltipManager.closeTip('chartElements');
             }
         };
 
@@ -4570,7 +4531,6 @@ define([], function () {
                 this.api.asc_setGraphicObjectProps(properties);
 
                 Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
-                Common.component.Analytics.trackEvent('DocumentHolder', 'Set Image Original Size');
             }
         };
 

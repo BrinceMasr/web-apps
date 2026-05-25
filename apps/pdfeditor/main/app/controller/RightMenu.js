@@ -1,33 +1,36 @@
 /*
- * (c) Copyright Ascensio System SIA 2010-2023
+ * Copyright (C) Ascensio System SIA, 2009-2026
  *
  * This program is a free software product. You can redistribute it and/or
  * modify it under the terms of the GNU Affero General Public License (AGPL)
- * version 3 as published by the Free Software Foundation. In accordance with
- * Section 7(a) of the GNU AGPL its Section 15 shall be amended to the effect
- * that Ascensio System SIA expressly excludes the warranty of non-infringement
- * of any third-party rights.
+ * version 3 as published by the Free Software Foundation, together with the
+ * additional terms provided in the LICENSE file.
  *
  * This program is distributed WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
- * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. For
+ * details, see the GNU AGPL at: https://www.gnu.org/licenses/agpl-3.0.html
  *
- * You can contact Ascensio System SIA at 20A-6 Ernesta Birznieka-Upish
- * street, Riga, Latvia, EU, LV-1050.
+ * You can contact Ascensio System SIA by email at info@onlyoffice.com
+ * or by postal mail at 20A-6 Ernesta Birznieka-Upisha Street, Riga,
+ * LV-1050, Latvia, European Union.
  *
- * The  interactive user interfaces in modified source and object code versions
- * of the Program must display Appropriate Legal Notices, as required under
+ * The interactive user interfaces in modified versions of the Program
+ * are required to display Appropriate Legal Notices in accordance with
  * Section 5 of the GNU AGPL version 3.
  *
- * Pursuant to Section 7(b) of the License you must retain the original Product
- * logo when distributing the program. Pursuant to Section 7(e) we decline to
- * grant you any rights under trademark law for use of our trademarks.
+ * No trademark rights are granted under this License.
  *
- * All the Product's GUI elements, including illustrations and icon sets, as
- * well as technical writing content are licensed under the terms of the
- * Creative Commons Attribution-ShareAlike 4.0 International. See the License
- * terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
+ * All non-code elements of the Product, including illustrations,
+ * icon sets, and technical writing content, are licensed under the
+ * Creative Commons Attribution-ShareAlike 4.0 International License:
+ * https://creativecommons.org/licenses/by-sa/4.0/legalcode
  *
+ * This license applies only to such non-code elements and does not
+ * modify or replace the licensing terms applicable to the Program's
+ * source code, which remains licensed under the GNU Affero General
+ * Public License v3.
+ *
+ * SPDX-License-Identifier: AGPL-3.0-only
  */
 /**
  *  RightMenu.js
@@ -91,6 +94,7 @@ define([
             // this._settings[Common.Utils.documentSettingsType.Chart] = {panelId: "id-chart-settings",          panel: rightMenu.chartSettings,    btn: rightMenu.btnChart,       hidden: 1, locked: false};
             // this._settings[Common.Utils.documentSettingsType.Signature] = {panelId: "id-signature-settings",  panel: rightMenu.signatureSettings, btn: rightMenu.btnSignature,  hidden: 1, props: {}, locked: false};
             this._settings[Common.Utils.documentSettingsType.Form] = {panelId: "id-form-settings",  panel: rightMenu.formSettings, btn: rightMenu.btnForm,  hidden: 1, props: {}, locked: false};
+            this._settings[Common.Utils.documentSettingsType.Annotation] = {panelId: "id-annotation-settings",  panel: rightMenu.annotationSettings, btn: rightMenu.btnAnnotation,  hidden: 1, props: {}, locked: false};
         },
 
         setApi: function(api) {
@@ -130,7 +134,7 @@ define([
         },
 
         onFocusObject: function(SelectedObjects, forceSignature, forceOpen) {
-            if (!(this.editMode && this.mode.isPDFEdit) && !forceSignature)
+            if (!this.editMode && !forceSignature)
                 return;
 
             var open = this._initSettings ? !Common.localStorage.getBool("pdfe-hide-right-settings", this.rightmenu.defaultHideRightMenu) : !!forceOpen;
@@ -255,6 +259,7 @@ define([
                 this.rightmenu.imageSettings.disableControls(disabled);
                 this.rightmenu.formSettings && this.rightmenu.formSettings.disableControls(disabled);
                 // this.rightmenu.chartSettings.disableControls(disabled);
+                this.rightmenu.annotationSettings.disableControls(disabled);
 
                 // if (this.rightmenu.signatureSettings) {
                 //     !allowSignature && this.rightmenu.btnSignature.setDisabled(disabled);
@@ -269,6 +274,7 @@ define([
                     this.rightmenu.btnTextArt.setDisabled(disabled);
                     this.rightmenu.btnForm && this.rightmenu.btnForm.setDisabled(disabled);
                     // this.rightmenu.btnChart.setDisabled(disabled);
+                    this.rightmenu.btnAnnotation.setDisabled(disabled);
                     this.rightmenu.setDisabledAllMoreMenuItems(disabled);
                 } else {
                     var selectedElements = this.api.getSelectedElements();
@@ -392,6 +398,8 @@ define([
                 //     return Common.Utils.documentSettingsType.Chart;
                 case Asc.c_oAscTypeSelectElement.Field:
                     return Common.Utils.documentSettingsType.Form;
+                case Asc.c_oAscTypeSelectElement.Annot:
+                    return Common.Utils.documentSettingsType.Annotation;
             }
         },
 
@@ -424,6 +432,7 @@ define([
                     Common.localStorage.setBool('pdfe-hidden-rightmenu', !status);
                     Common.Utils.InternalSettings.set("pdfe-hidden-rightmenu", !status);
                 }
+                !view && this.rightmenu.fireEvent('view:hide', [this, !status]);
             }
 
             Common.NotificationCenter.trigger('layout:changed', 'main');
@@ -431,7 +440,10 @@ define([
         },
 
         addNewPlugin: function (button, $button, $panel) {
-            this.getApplication().getController('Viewport').applyEditorMode(true);
+            if(this.rightmenu.$el.is(':hidden')) {
+                this.onRightMenuHide(undefined, true, false);
+            }
+
             this.rightmenu.insertButton(button, $button);
             this.rightmenu.insertPanel($panel);
         },
