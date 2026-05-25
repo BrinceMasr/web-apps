@@ -13,7 +13,7 @@ path_to_compare = "../apps"
 cmd_args = sys.argv[1:]
 for i in cmd_args:
     if i == '--check':
-	    merge_dicts = False
+        merge_dicts = False
     elif i == '--verbose':
         verbose_out = True
     elif i[:2] != '--' and os.path.isdir(i):
