@@ -55,8 +55,8 @@ define([
         events: function() {
             return {
                 'keyup input#ce-cell-name': _.bind(this.onCellName,this),
-                'keyup textarea#ce-cell-content': _.bind(this.onKeyupCellEditor,this),
-                'blur textarea#ce-cell-content': _.bind(this.onBlurCellEditor,this),
+                'keyup #ce-cell-content': _.bind(this.onKeyupCellEditor,this),
+                'blur #ce-cell-content': _.bind(this.onBlurCellEditor,this),
                 'click button#ce-btn-expand': _.bind(this.expandEditorField,this),
                 'click button#ce-func-label': _.bind(this.onInsertFunction, this)
             };
@@ -140,6 +140,9 @@ define([
 
         onCellEditorTextChange:function (){
             this.editor.cellEditorTextChange();
+            if (this.api && this.api.wb && this.api.wb.cellEditor) {
+                this.api.wb.cellEditor._updateTopLineScroll();
+            }
         },
 
         onApiEditCell: function(state) {
