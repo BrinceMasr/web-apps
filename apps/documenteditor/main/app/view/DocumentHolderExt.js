@@ -1167,6 +1167,11 @@ define([], function () {
 
             var menuHLInsertCaptionSeparator = new Common.UI.MenuItem({ caption: '--' });
             var menuHLHyperlinkSeparator = new Common.UI.MenuItem({ caption: '--' });
+            var menuHLAdvancedSeparator = new Common.UI.MenuItem({ caption: '--' });
+
+            me.menuHLAdvanced = new Common.UI.MenuItem({
+                caption: me.textHorizontalLineSettings
+            });
 
             me.menuAddHyperlinkHL = new Common.UI.MenuItem({
                 iconCls: 'menu__icon btn-inserthyperlink',
@@ -1218,6 +1223,7 @@ define([], function () {
                     }
                     me.menuAddHyperlinkHL.setDisabled(islocked);
                     menuHyperlinkHL.setDisabled(islocked || (value.hyperProps !== undefined && value.hyperProps.isSeveralLinks === true));
+                    me.menuHLAdvanced.setDisabled(islocked);
                 },
                 items: [
                     me.menuHLCut,
@@ -1228,7 +1234,9 @@ define([], function () {
                     me.menuHLInsertCaption,
                     menuHLHyperlinkSeparator,
                     me.menuAddHyperlinkHL,
-                    menuHyperlinkHL
+                    menuHyperlinkHL,
+                    menuHLAdvancedSeparator,
+                    me.menuHLAdvanced
                 ]
             }).on('hide:after', function(menu, e, isFromInputControl) {
                 me.clearCustomItems(menu);

@@ -105,6 +105,7 @@ define([], function () {
                     this.api.asc_registerCallback('asc_onHideEyedropper',           _.bind(this.hideEyedropper, this));
                     this.api.asc_SetMathInputType(Common.localStorage.getBool("de-equation-input-latex") ? Asc.c_oAscMathInputType.LaTeX : Asc.c_oAscMathInputType.Unicode);
                     this.api.asc_registerCallback('asc_onSingleChartSelectionChanged',  _.bind(this.onSingleChartSelectionChanged, this));
+                    $(this.documentHolder.el).on('dblclick', _.bind(this.onDblClickHorLine, this));
                 }
                 this.api.asc_registerCallback('asc_onShowForeignCursorLabel',       _.bind(this.onShowForeignCursorLabel, this));
                 this.api.asc_registerCallback('asc_onHideForeignCursorLabel',       _.bind(this.onHideForeignCursorLabel, this));
@@ -307,6 +308,7 @@ define([], function () {
             view.menuAddHyperlinkHL.on('click', _.bind(me.addHyperlink, me));
             view.menuEditHyperlinkHL.on('click', _.bind(me.editHyperlink, me));
             view.menuRemoveHyperlinkHL.on('click', _.bind(me.onRemoveHyperlink, me));
+            view.menuHLAdvanced.on('click', _.bind(me.onHLAdvanced, me));
             view.menuImgReplace.menu.on('item:click', _.bind(me.onImgReplace, me));
             view.menuImgEditPoints.on('click', _.bind(me.onImgEditPoints, me));
             view.mnuTableMerge.on('click', _.bind(me.onTableMerge, me));
@@ -2618,6 +2620,47 @@ define([], function () {
                 me.api.ImgApply(properties);
             }
             me.editComplete();
+        };
+
+        dh.onDblClickHorLine = function() {
+            if (!this.api) return;
+            var selectedElements = this.api.getSelectedElements();
+            if (!selectedElements || !_.isArray(selectedElements)) return;
+            for (var i = selectedElements.length - 1; i >= 0; i--) {
+                if (Asc.c_oAscTypeSelectElement.HorizontalLine === selectedElements[i].get_ObjectType()) {
+                    this.onHLAdvanced();
+                    return;
+                }
+            }
+        };
+
+        dh.onHLAdvanced = function() {
+            var me = this;
+            if (!me.api) return;
+            var selectedElements = me.api.getSelectedElements();
+            if (!selectedElements || !_.isArray(selectedElements)) return;
+            for (var i = selectedElements.length - 1; i >= 0; i--) {
+                var elType  = selectedElements[i].get_ObjectType();
+                var elValue = selectedElements[i].get_ObjectValue();
+                if (Asc.c_oAscTypeSelectElement.HorizontalLine === elType) {
+                    var section = me.api.asc_GetSectionProps ? me.api.asc_GetSectionProps() : null;
+                    var colWidth = me.api.asc_GetCurrentColumnWidth
+                        ? me.api.asc_GetCurrentColumnWidth()
+                        : (section ? section.get_W() - section.get_LeftMargin() - section.get_RightMargin() : null);
+                    var win = new DE.Views.HorizontalLineSettings({
+                        hrProps: elValue,
+                        colWidth: colWidth,
+                        handler: function(state, settings) {
+                            if (state === 'ok' && me.api) {
+                                me.api.asc_SetHorizontalRuleProperties(settings);
+                            }
+                            me.editComplete();
+                        }
+                    });
+                    win.show();
+                    return;
+                }
+            }
         };
 
         dh.onImgAdvanced = function(item, e) {
