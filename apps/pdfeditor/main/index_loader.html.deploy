@@ -335,18 +335,8 @@
             var script = document.createElement("script");
             script.src = "../../../vendor/requirejs/require.js";
 
-            if (isIEBrowser === true) {
-                (document.write('<script src="../../common/main/lib/util/fix-ie-compat.js"><\/script>'),
-                document.write('<script src="../../../../sdkjs/vendor/string.js"><\/script>'));
-
-                setTimeout(function(){
-                    script.setAttribute("data-main", "ie/app");
-                    document.body.appendChild(script);
-                },0);
-            } else {
-                script.setAttribute("data-main", "app");
-                document.body.appendChild(script);
-            }
+            script.setAttribute("data-main", "app");
+            document.body.appendChild(script);
         }
         if (isForm===undefined) {
             listenApiMsg(function (isform) {

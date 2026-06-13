@@ -283,8 +283,6 @@ module.exports = function(grunt) {
     grunt.loadNpmTasks('grunt-svgmin');
     grunt.loadNpmTasks('grunt-exec');
     grunt.loadNpmTasks('grunt-terser');
-    grunt.loadNpmTasks('grunt-babel');
-
     function doRegisterTask(name, callbackConfig) {
         return grunt.registerTask(name + '-init', function() {
             var additionalConfig = {},
@@ -578,10 +576,7 @@ module.exports = function(grunt) {
 
             replace: {
                 writeVersion: {
-                    // When --skip-babel is used, don't include ie/ directory (it won't exist)
-                    src: grunt.option('skip-babel')
-                        ? ['<%= pkg.main.js.requirejs.options.out %>', '<%= pkg.main.js.postload.options.out %>']
-                        : ['<%= pkg.main.js.requirejs.options.out %>', '<%= pkg.main.js.postload.options.out %>', packageFile.main.js.babel.files[0].dest],
+                    src: ['<%= pkg.main.js.requirejs.options.out %>', '<%= pkg.main.js.postload.options.out %>'],
                     overwrite: true,
                     replacements: [{
                         from: /\{\{PRODUCT_VERSION\}\}/g,
@@ -662,10 +657,6 @@ module.exports = function(grunt) {
                 }
             },
 
-            // Terser tasks are broken out separately (build, postload, iecompat) rather than
-            // using a single 'terser' task. This allows deploy-app-main to run only the tasks
-            // it needs (terser:build, terser:postload) and skip terser:iecompat, which handles
-            // IE compatibility for babel-transpiled files - unnecessary overhead for modern builds.
             terser: {
                 options: {
                     mangle: false,
@@ -683,27 +674,6 @@ module.exports = function(grunt) {
                     src: packageFile.main.js.postload.options.out,
                     dest: packageFile.main.js.postload.options.out,
                 },
-                iecompat: {
-                    options: {
-                        sourceMap: false,
-                    },
-                    files: [{
-                        expand: true,
-                        cwd: packageFile.main.js.babel.files[0].dest,
-                        src: `*.js`,
-                        dest: packageFile.main.js.babel.files[0].dest
-                    }]
-                },
-            },
-
-            babel: {
-                options: {
-                    sourceMap: false,
-                    presets: [['@babel/preset-env', {modules: false}]]
-                },
-                dist: {
-                    files: packageFile.main.js.babel.files
-                }
             },
         });
 
@@ -1003,9 +973,6 @@ module.exports = function(grunt) {
     var copyTask = grunt.option('desktop')? "copy": "copy:script";
     var imageminTask = grunt.option('skip-imagemin') ? ['copy:images-app'] : ['imagemin'];
     var spritesTask = grunt.option('skip-sprites') ? [] : ['prebuild-svg-sprites'];
-    // Skip babel ES5 transpilation for modern-only builds (use --skip-babel flag)
-    // When skipped, no ie/ directory is created - only ES6 output is produced
-    var babelTask = grunt.option('skip-babel') ? [] : ['babel'];
 
     grunt.registerTask('deploy-api',                    ['api-init', 'clean', copyTask, 'replace:writeVersion']);
     grunt.registerTask('deploy-apps-common',            ['apps-common-init', 'clean', 'copy', 'replace', 'inline', ...imageminTask, 'svgmin']);
@@ -1025,7 +992,7 @@ module.exports = function(grunt) {
     grunt.registerTask('deploy-common-embed',           ['common-embed-init', 'clean', 'copy']);
 
     grunt.registerTask('deploy-app-main',               [...spritesTask, 'main-app-init', 'clean:prebuild', ...imageminTask, 'less',
-                                                            'requirejs', ...babelTask, 'terser:build', 'terser:postload', 'concat', 'copy', 'svgmin', 'replace:indexhtml', 'inline', 'json-minify',
+                                                            'requirejs', 'terser:build', 'terser:postload', 'concat', 'copy', 'svgmin', 'replace:indexhtml', 'inline', 'json-minify',
                                                             'replace:writeVersion', 'replace:prepareHelp', 'clean:postbuild']);
 
     grunt.registerTask('deploy-app-mobile',             ['mobile-app-init', 'clean:deploy', /*'cssmin',*/ /*'copy:template-backup',*/

@@ -334,14 +334,9 @@
     <div id="viewport"></div>
     <script src="../../../../../../sdkjs/common/device_scale.js?__inline=true"></script>
 
-    <script>
-        isIEBrowser === true &&
-            (document.write('<script src="../../common/main/lib/util/fix-ie-compat.js"><\/script>'),
-            document.write('<script src="../../../../sdkjs/vendor/string.js"><\/script>'));
-    </script>
     <script src="../../../vendor/requirejs/require.js"></script>
     <script>
-        isIEBrowser === true ? require(['ie/app']) : require(['app']);
+        require(['app']);
     </script>
 
     <link rel="stylesheet" type="text/css" href="../../../apps/documenteditor/main/resources/css/app.css" media="print" onload="this.media='all'">
