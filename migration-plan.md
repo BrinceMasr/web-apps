@@ -221,18 +221,52 @@ Rationale: if the Grunt tasks are removed first but HTML still has `require(['ie
 
 Replace the Grunt task zoo with webpack loaders/plugins. Replace r.js with webpack's native AMD handling. One editor at a time, using e2e as the gate per editor.
 
-**Pre-work (do once):**
-- [ ] Write the `text!` webpack loader shim (handles `text!path/to/template.html` AMD imports)
-- [ ] Translate r.js `paths`/`map` config to webpack `resolve.alias`
-- [ ] Translate r.js `shim` config (jQuery, Backbone, Underscore) to webpack `ProvidePlugin` / `imports-loader`
-- [ ] **`_themVal()` → DefinePlugin: extend `theme.config.mjs`, do NOT reinvent.** `theme.config.mjs:themeDefines()` is the mobile mirror of `_themVal()` — it is already half-built. The desktop migration must extend it, not write a second DefinePlugin source. Key delta: desktop has ~10 more replacement keys than mobile (`HELP_CENTER_WEB_*`, `SUGGEST_URL`, `API_URL_EDITING_CALLBACK`, `COEDITING_DESKTOP`, `PLUGIN_LINK*`, `DEFAULT_LANG`, `APP_COPYRIGHT` banner). List the full delta before writing any DefinePlugin config.
-- [ ] **`{{PRODUCT_VERSION}}` injection** — `replace:writeVersion` in Grunt injects `version.build` into compiled JS. webpack must replicate via `DefinePlugin` or `string-replace-loader`. Add to the DefinePlugin config alongside `_themVal()`.
-- [ ] Replicate the addon merge system as a webpack config merge utility
-- [ ] Document the entry-point/HTML template story — `require.config` lives in HTML files; `grunt-inline` and `replace:indexhtml` rewrite those pages. **Three HTML entry points per editor must stay in sync:** `index.html` (dev), `index_loader.html`, `index.html.deploy` (prod, processed by grunt-inline for `<inline>` SVG sprites). SVG sprite includes break if any of the three is missed — this has happened before (sprites missing from `.deploy` for all editors except documenteditor).
-- [ ] Document the output path contract — DocumentServer packaging copies built files by exact path (`code.js`, `app.js` per per-editor JSON configs). webpack output filenames must match exactly or packaging breaks silently. **Do not use content-hashed filenames in committed HTML** — the mobile pipeline has a live trap where committed `index.html` links `css/app.[hash].css` but the CSS is gitignored; a CSS change shifts the hash and the link 404s. Mandate stable filenames.
-- [ ] Decide the webpack-side answer for `grunt-inline` — either HtmlWebpackPlugin inline or keep a post-build step. This is load-bearing and not optional.
-- [ ] **Baseline vs prod-bake gap** — the baseline was captured with `--skip-imagemin`. The x86 production bake Dockerfile runs imagemin and will fail the ±15% size gate against this baseline. Confirm that prod-bake is not gated against `baseline.json`, or capture a separate prod baseline. Document which gate applies where.
-- [ ] Spike on visioeditor first (one day) to validate the shim designs against actual usage before committing the full editor order.
+### Baseline gate strategy change (Opus review, v6)
+
+**The module-manifest diff gate is wrong for a bundler swap.** r.js and webpack will never produce identical module manifests or byte-identical bundles — the gate will be red by construction after migrating any editor. For migrated editors, replace module-manifest diff with:
+1. **Output-filename presence gate** — every expected `app.js`, `code.js`, locale JSON, CSS, and image file must be present at the exact path the packaging contract expects.
+2. **Behavioural smoke test** — editor boots, controllers register by name, `code.js` loads on demand (see smoke-test.md).
+
+The module-manifest/hash gate remains valid for Grunt-only editors (not yet migrated) — it catches regressions in the unchanged editors during the dual-build window.
+
+### Pre-work (do once)
+
+- [ ] **Audit named `define()`**: grep for `define('name',` (named modules) across all editors. These are the AMD ids that webpack ignores (webpack resolves by file path, not by the explicit id string). Every named module must become a `resolve.alias` entry mapping `id → file path`. Failure to do this produces *silent* broken links — `require('name')` just resolves nothing. Expected count: ~19 based on advisor scan.
+
+- [ ] **`text!` plugin via asset/source**: Do NOT write a custom loader. Add a `NormalModuleReplacementPlugin` that strips the `text!` prefix and rewrites the request, then add a rule `type: 'asset/source'` matching `.html` / `.template` extensions. The replacer must anchor on the AMD dependency string — a raw text scan will false-fire on `text!==false` (that is `!==` operator, not a plugin prefix). `.template` has no webpack-recognized extension by default — add it explicitly to the rule.
+
+- [ ] **`code.js` as second webpack entry with `dependOn`**: `app_pack.js` is a bare `require([47 modules])` side-effect preload — no `define()`, no return value. DocumentServer's outer page loads `code.js` *after* `app.js`. Replicate as a second webpack entry: `entry: { app: './app.js', code: { import: './app_pack.js', dependOn: 'app' } }`. The `dependOn: 'app'` flag shares the single runtime chunk, so the `define()`-registered classes in `app.js` are visible to `code.js` without double-bundling. This is the most likely thing to silently break — validate it first in the spike.
+
+- [ ] **Translate r.js `paths` to `resolve.alias`** — including the 19 named-define ids found in the audit above. `empty:` paths → webpack `externals`.
+
+- [ ] **Translate r.js `shim` to `ProvidePlugin`** — Backbone/Underscore/perfectscrollbar global side effects; use `ProvidePlugin` for globals (`_`, `Backbone`); use `imports-loader` for dependency-ordering shimmed non-AMD libs.
+
+- [ ] **Strip `require.config()` from HTML templates** — do NOT leave them. They will throw `require is not defined` at execution time when require.js is absent. The template must be cleaned during the migration of each editor. Move all alias truth into the webpack config.
+
+- [ ] **AGPL license header preservation in TerserPlugin**: webpack's default Terser pass strips all comments, including Ascensio AGPL headers. This is a compliance regression the gate will not catch. Add `extractComments: false` and preserve license comments:
+  ```js
+  new TerserPlugin({
+      extractComments: false,
+      terserOptions: { format: { comments: /AGPL|Copyright|License/i } },
+  })
+  ```
+  Verify the header survives in the emitted bundle before shipping any editor.
+
+- [ ] **`_themVal()` → DefinePlugin: extend `theme.config.mjs`, do NOT reinvent.** `theme.config.mjs:themeDefines()` is the mobile mirror — it is already half-built. The desktop migration must extend it. Key delta: ~10 more replacement keys than mobile (`HELP_CENTER_WEB_*`, `SUGGEST_URL`, `API_URL_EDITING_CALLBACK`, `COEDITING_DESKTOP`, `PLUGIN_LINK*`, `DEFAULT_LANG`, `APP_COPYRIGHT` banner). List the full delta before writing any DefinePlugin config.
+
+- [ ] **`{{PRODUCT_VERSION}}` injection** — `replace:writeVersion` in Grunt injects `version.build` into compiled JS. webpack must replicate via `DefinePlugin` or `string-replace-loader`. Add alongside `themeDefines()`.
+
+- [ ] **Replicate the addon merge system** as a webpack config merge utility.
+
+- [ ] **grunt-inline answer — keep as post-webpack pass (option a)**. Do NOT use HtmlWebpackPlugin `templateParameters` + `fs.readFileSync` for the SVG sprite. That approach inlines the SVG at config-eval time (not watched), loses grunt-inline's relative-path resolution, and adds migration risk. Keep grunt-inline as a thin post-webpack HTML pass for SVG sprite injection only — it is a 1:1 behavior match against the baseline gate.
+
+- [ ] **Three HTML entry points per editor must stay in sync** — `index.html` (dev), `index_loader.html`, `index.html.deploy` (prod, processed by grunt-inline for `<inline>` SVG sprites). SVG sprite includes break if any of the three is missed.
+
+- [ ] **Output path contract** — webpack output filenames must match what DocumentServer packaging expects (`code.js`, `app.js` per editor). No content-hashed filenames.
+
+- [ ] **Baseline vs prod-bake gap** — baseline captured with `--skip-imagemin`. x86 prod bake Dockerfile runs imagemin. The gate must not run against prod bake output. Documented in `docs/multi-repo-deps.md`.
+
+- [ ] **Spike on visioeditor** — validate: (1) two-entry `app.js`/`code.js` split with `dependOn` produces a working editor, (2) named-define resolution for found named modules, (3) `text!`→asset/source rewrite works across real templates, (4) output filenames match packaging contract, (5) green baseline file-presence gate. Note explicitly: a clean visioeditor spike does NOT de-risk documenteditor's `COEDITING_DESKTOP`/plugin breadth — those paths need separate validation.
 
 **Per-editor migration order** (safest first):
 1. `visioeditor` — newest, smallest, fewest legacy patterns, genuinely standalone
@@ -274,6 +308,10 @@ Once majority-ESM: evaluate Rspack (drop-in webpack-API Rust rewrite with AMD su
 | Dual-build window — while some editors are grunt and some are webpack, CI must run both pipelines | Budget for this; document it explicitly in CI config |
 | Vendor packages in `web-apps/vendor/` with non-standard module formats | Each may need bespoke shims; 557 AMD files is the known surface, vendor is the unknown one — audit during Step 2 |
 | Implicit global leakage — AMD code relying on undeclared globals breaks when webpack wraps modules | Only the smoke test catches this; the minimal headless Playwright check is the safety net |
+| Named `define('id', …)` modules — webpack ignores explicit AMD module ids, resolves by file path | Audit all named defines; add each as a `resolve.alias` entry before migrating any editor |
+| AGPL license headers stripped by Terser | Configure `TerserPlugin` with `extractComments:false` and preserve AGPL/Copyright comments; verify in emitted bundle |
+| Baseline gate wrong for bundler swap — module manifests will never match | Switch migrated-editor gate to file-presence + smoke test; keep module-manifest gate only for unmigrated editors |
+| `require([...], cb)` becomes async chunk boundary in webpack by default | This changes runtime load order; test that dialog modules still register correctly after migration |
 
 ---
 
@@ -286,6 +324,7 @@ Once majority-ESM: evaluate Rspack (drop-in webpack-API Rust rewrite with AMD su
 | v3 | 2026-06-13 | Claude Sonnet | Added Step 4.0 IE removal with full scope (12 html.deploy files, 6 app.js files, build/appforms.js, Makefile ref); documented key finding that develop/setup/Makefile already passes --skip-babel (IE bundles absent from production today) |
 | v4 | 2026-06-13 | Opus (claude-opus-4-8) | Corrected: --skip-babel is web-apps-dev only; production build DOES produce IE bundles; IE bundles ARE in production. Added: missing grunt.loadNpmTasks('grunt-babel') removal, string.js injection in HTML blocks (not just fix-ie-compat.js), presentationeditor/reporter.html.deploy, embed editor awareness. Clarified: leave htmlutils/themeinit isIEBrowser guards (not dead code, runtime guards). Added explicit execution order (HTML source first, then Gruntfile, then delete fix-ie-compat.js). |
 | v5 | 2026-06-13 | Opus (claude-opus-4-8) | Dropped 4.6 (phantom — no web-apps sed; server sed is unrelated). Deferred 4.3 (imagemin never runs; document prod-bake baseline gap). Upgraded 4.7 to doc+preflight. Step 5 pre-work corrections: extend theme.config.mjs/themeDefines() not reinvent; add {{PRODUCT_VERSION}} DefinePlugin item; three HTML entry points per editor (SVG sprite trap); content-hash filename trap from mobile pipeline; prod-bake vs baseline gap. |
+| v6 | 2026-06-13 | Opus (claude-opus-4-8) | Critical Step 5 corrections: (1) Baseline gate is wrong for a bundler swap — module manifests will never match r.js output; switch to file-presence + smoke test for migrated editors. (2) ~19 named `define('id',…)` modules — webpack ignores AMD ids, must audit and add each as resolve.alias. (3) code.js must be second webpack entry with `dependOn: 'app'` not a dynamic import. (4) require.config() in HTML must be stripped (throws if require.js absent). (5) grunt-inline answer reversed: keep as post-webpack pass (option a), NOT HtmlWebpackPlugin templateParameters. (6) AGPL headers stripped by Terser — must configure TerserPlugin to preserve. Added four new risk rows. |
 
 ---
 
