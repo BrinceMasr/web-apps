@@ -39,6 +39,25 @@ module.exports = function(grunt) {
                     ' */\n';
     global.copyright = copyright;
 
+    // Preflight: assert required sibling repos are present before doing any work.
+    // webpack migration note: sdkjs is the only cross-repo dep; resolve.alias must
+    // point here too. See docs/multi-repo-deps.md for full dependency map.
+    (function preflight() {
+        const _fs   = require('fs');
+        const _path = require('path');
+        const REQUIRED = [
+            { path: _path.resolve(__dirname, '../../sdkjs'), label: 'sdkjs (SDK assets)' },
+        ];
+        const missing = REQUIRED.filter(r => !_fs.existsSync(r.path));
+        if (missing.length) {
+            grunt.fail.fatal(
+                'Missing required sibling repositories:\n' +
+                missing.map(r => '  ' + r.label + '\n  expected at: ' + r.path).join('\n') +
+                '\nCheck out the missing repos before building.'
+            );
+        }
+    })();
+
     let iconv_lite, encoding = process.env.SYSTEM_ENCODING;
     grunt.log.writeln('platform: ' + process.platform.green);
 
