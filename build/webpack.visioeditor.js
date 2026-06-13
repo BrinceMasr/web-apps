@@ -70,11 +70,13 @@ export default {
     output: {
         path: OUT_DIR,
         filename: '[name].js',
-        // If AMD require([...], cb) creates async chunks they land here.
-        // SPIKE: verify these file names and update the packaging contract if needed.
         chunkFilename: '[name].chunk.js',
         publicPath: '',
         clean: false,
+        // Prevent async chunk files — all AMD require([...], cb) must land in app.js/code.js.
+        // DocumentServer packaging copies output by exact filename; extra chunk files
+        // would be silently missing from the deployed package.
+        asyncChunks: false,
     },
 
     resolve: {
@@ -114,7 +116,22 @@ export default {
     },
 
     module: {
+        // locale.js uses require([polyfill], cb) inside a plain new(function(){}) body,
+        // not inside define(). The AMD parser crashes on it (addPresentationalDependency
+        // TypeError). The polyfill path is dead in any modern browser (fetch and Promise
+        // are both native). Bypass AMD parsing for this file entirely.
+        noParse: /apps[/\\]common[/\\]locale\.js$/,
+
         rules: [
+            // LaunchController.js:46 uses require({waitSeconds:0}, dynamicArray, cb) —
+            // the require.js 3-arg config+deps+callback form. webpack AMD parser errors.
+            // In webpack world DocumentServer loads code.js separately; the call is
+            // superseded by the app-pack:loaded listener path. Disable AMD for this file.
+            {
+                test: /controller[/\\]LaunchController\.js$/,
+                parser: { amd: false },
+            },
+
             // text! AMD plugin → asset/source (raw string).
             // NormalModuleReplacementPlugin below strips the 'text!' prefix before
             // this rule runs, so the test matches the bare filename.
