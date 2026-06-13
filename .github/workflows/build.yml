@@ -9,7 +9,7 @@ jobs:
         name: "Build web-apps"
         runs-on: self-hosted
         env:
-            NODE_VERSION: 16
+            NODE_VERSION: 20
         steps:
 
           - name: Checkout web-apps
@@ -50,4 +50,9 @@ jobs:
           - name: Run grunt
             run: |
               cd web-apps/build
-              grunt
+              THEME=euro-office grunt --skip-imagemin
+
+          - name: Baseline diff
+            run: |
+              node web-apps/build/scripts/baseline.js deploy/web-apps/apps \
+                --diff web-apps/build/scripts/baseline.json
