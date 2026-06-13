@@ -54,11 +54,18 @@ export default {
     mode: env,
 
     entry: {
-        app: [
-            // LESS compiled alongside JS; MiniCssExtractPlugin pulls it to resources/css/app.css
-            path.join(APPS_ROOT, 'visioeditor/main/resources/less/app.less'),
-            path.join(APPS_ROOT, 'visioeditor/main/app.js'),
-        ],
+        app: {
+            import: [
+                // LESS compiled alongside JS; MiniCssExtractPlugin pulls it to resources/css/app.css
+                path.join(APPS_ROOT, 'visioeditor/main/resources/less/app.less'),
+                path.join(APPS_ROOT, 'visioeditor/main/app.js'),
+            ],
+            // Emit app.js as a named AMD module so require.js can load it with
+            // externals (sdk, socketio, etc.) resolved as AMD dependencies.
+            // Without this, webpack emits a plain IIFE and AMD externals compile
+            // to `module.exports = undefined`.
+            library: { type: 'amd', name: 'app' },
+        },
         code: {
             import: path.join(APPS_ROOT, 'visioeditor/main/app_pack.js'),
             // Shares the webpack runtime with 'app' — define()-registered
@@ -106,13 +113,17 @@ export default {
 
     // r.js `empty:` paths are excluded from the bundle.
     // Provided at runtime by DocumentServer (sdkjs, socketio, etc.).
+    // externalsType: 'amd' makes webpack generate `require('sdk')` AMD stubs
+    // instead of the broken `void 0` produced by the per-key { amd: 'sdk' }
+    // multi-format object when library.type is only set per-entry.
+    externalsType: 'amd',
     externals: {
-        xregexp:       { amd: 'xregexp',       root: 'XRegExp' },
-        socketio:      { amd: 'socketio',       root: 'io'      },
-        coapisettings: { amd: 'coapisettings'                   },
-        allfonts:      { amd: 'allfonts'                        },
-        sdk:           { amd: 'sdk'                             },
-        api:           { amd: 'api',            root: 'DocsAPI' },
+        xregexp:       'xregexp',
+        socketio:      'socketio',
+        coapisettings: 'coapisettings',
+        allfonts:      'allfonts',
+        sdk:           'sdk',
+        api:           'api',
     },
 
     module: {
