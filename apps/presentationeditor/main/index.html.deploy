@@ -438,6 +438,7 @@
             paths: {
                 app:           "presentationeditor/main/app",
                 sdk:           "../../sdkjs/slide/sdk-all-min",
+                jquery:        "../vendor/jquery/jquery.min",
                 socketio:      "../vendor/socketio/socket.io.min",
                 xregexp:       "../vendor/xregexp/xregexp-all-min",
                 allfonts:      "../../sdkjs/common/AllFonts",

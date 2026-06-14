@@ -31,7 +31,7 @@ const BUILD_ROOT = process.env.BUILD_ROOT
 
 const APPS_ROOT   = path.resolve(__dirname, '../apps');
 const VENDOR_ROOT = path.resolve(__dirname, '../vendor');
-const OUT_DIR     = path.join(BUILD_ROOT, 'web-apps/apps/documenteditor/main');
+const OUT_DIR     = path.join(BUILD_ROOT, 'web-apps/apps/spreadsheeteditor/main');
 
 const productVersion = process.env.PRODUCT_VERSION
     ? `${process.env.PRODUCT_VERSION}${process.env.BUILD_NUMBER ? `.${process.env.BUILD_NUMBER}` : ''}`
@@ -43,13 +43,13 @@ export default {
     entry: {
         app: {
             import: [
-                path.join(APPS_ROOT, 'documenteditor/main/resources/less/app.less'),
-                path.join(APPS_ROOT, 'documenteditor/main/app.js'),
+                path.join(APPS_ROOT, 'spreadsheeteditor/main/resources/less/app.less'),
+                path.join(APPS_ROOT, 'spreadsheeteditor/main/app.js'),
             ],
             library: { type: 'amd', name: 'app' },
         },
         code: {
-            import: path.join(APPS_ROOT, 'documenteditor/main/app_pack.js'),
+            import: path.join(APPS_ROOT, 'spreadsheeteditor/main/app_pack.js'),
             dependOn: 'app',
         },
     },
@@ -66,7 +66,6 @@ export default {
     resolve: {
         extensions: ['.js'],
         alias: {
-            jquery:           path.join(VENDOR_ROOT, 'jquery/jquery.min.js'),
             underscore:       path.join(VENDOR_ROOT, 'underscore/underscore-min.js'),
             backbone:         path.join(VENDOR_ROOT, 'backbone/backbone-min.js'),
             perfectscrollbar: path.join(APPS_ROOT,   'common/main/lib/mods/perfect-scrollbar.js'),
@@ -86,6 +85,7 @@ export default {
 
     externalsType: 'amd',
     externals: {
+        jquery:        'jquery',
         xregexp:       'xregexp',
         socketio:      'socketio',
         coapisettings: 'coapisettings',
@@ -95,8 +95,6 @@ export default {
     },
 
     module: {
-        noParse: /apps[/\\]common[/\\]locale\.js$/,
-
         rules: [
             {
                 test: /\.js$/,
@@ -105,8 +103,25 @@ export default {
                 options: { multiple: themeReplacements(productVersion) },
             },
             {
-                test: /controller[/\\]LaunchController\.js$/,
-                parser: { amd: false },
+                // locale.js contains a dead fetch/Promise polyfill branch that uses
+                // require([...], cb) inside an IIFE body, which crashes the AMD parser
+                // (addPresentationalDependency TypeError). Remove it — fetch and Promise
+                // are always native in modern browsers.
+                test: /common[/\\]locale\.js$/,
+                loader: 'string-replace-loader',
+                options: {
+                    multiple: [
+                        {
+                            search: 'if \\( !window\\.fetch \\) \\{[\\s\\S]*?\\} else _requireLang\\(\\);',
+                            replace: '    _requireLang();',
+                            flags: 'g',
+                        },
+                    ],
+                },
+            },
+            {
+                test: /main[/\\]app\.js$/,
+                parser: { requireJs: true },
             },
             {
                 test: /\.template$/,
@@ -125,7 +140,7 @@ export default {
                                 globalVars: {
                                     'app-image-const-path':    "'../img'",
                                     'common-image-const-path': "'../../../../common/main/resources/img'",
-                                    ...themeGlobalVars(env, 'documenteditor'),
+                                    ...themeGlobalVars(env, 'spreadsheeteditor'),
                                 },
                             },
                         },
@@ -159,7 +174,7 @@ export default {
         new CopyWebpackPlugin({
             patterns: [
                 {
-                    from: path.join(APPS_ROOT, 'documenteditor/main/locale'),
+                    from: path.join(APPS_ROOT, 'spreadsheeteditor/main/locale'),
                     to:   path.join(OUT_DIR, 'locale'),
                 },
             ],

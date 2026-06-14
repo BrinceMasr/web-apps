@@ -28,10 +28,10 @@ const BUILD_DIR  = path.resolve(__dirname, '..');
 const DEPLOY_DIR = path.resolve(BUILD_DIR, '../deploy/web-apps/apps');
 
 const EDITORS = [
-    { name: 'documenteditor',     config: 'webpack.documenteditor.js' },
-    { name: 'spreadsheeteditor',  config: 'webpack.spreadsheeteditor.js' },
-    { name: 'presentationeditor', config: 'webpack.presentationeditor.js' },
-    { name: 'visioeditor',        config: 'webpack.visioeditor.js' },
+    { name: 'documenteditor',     config: 'webpack.documenteditor.mjs' },
+    { name: 'spreadsheeteditor',  config: 'webpack.spreadsheeteditor.mjs' },
+    { name: 'presentationeditor', config: 'webpack.presentationeditor.mjs' },
+    { name: 'visioeditor',        config: 'webpack.visioeditor.mjs' },
 ];
 
 const TRACKED_ASSETS = ['app.js', 'code.js', 'resources/css/app.css'];

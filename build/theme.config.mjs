@@ -66,6 +66,54 @@ export function themeReplacements(productVersion) {
   function tok(name) { return `\\{\\{${name}\\}\\}`; }
   function tv(envVal, metaKey, def) { return themeVal(envVal, metaKey, def); }
   return [
+    // Inside a webpack module factory, `var` declarations are function-scoped and
+    // never become window properties. Every file in this codebase that guards its
+    // Common namespace uses the pattern below. Replace it with an explicit
+    // window.Common reference so the property is visible across all modules.
+    {
+      search: 'if \\(Common === undefined\\)(?:\\s*\\{)?\\s+var Common = \\{\\};(?:\\s*\\})?',
+      replace: 'window.Common = window.Common || {};\nvar Common = window.Common;',
+      flags: 'g',
+    },
+    // Several files declare `var c_X = {...}` at the TOP of the file (column 0),
+    // BEFORE the define() call — a legacy pattern relying on r.js top-level var
+    // becoming window.* in the concatenated output. Under webpack each file is a
+    // factory; these constants never reach window and consumers throw ReferenceError.
+    // The `^` anchor is critical: without it, 5 indented factory-local c_* vars
+    // (including 4 same-named c_oAscMathMainTypeStrings across editors) would also
+    // be promoted to window, causing cross-editor clobber at runtime.
+    {
+      search: '^var (c_[a-zA-Z]+) = \\{',
+      replace: 'var $1 = window.$1 = {',
+      flags: 'gm',
+    },
+    // Several files declare `var ALLCAPS_NAME = value` at column 0 BEFORE define() —
+    // the same legacy r.js implicit-global pattern as the c_* constants above, but for
+    // non-object values (numbers). Affected: SCALE_MIN, MENU_SCALE_PART, MENU_BASE_WIDTH
+    // (RightMenu.js ×4 editors), FONT_TYPE_RECENT (ComboBoxFonts.js). Viewport.js and
+    // Fonts.js use these as bare globals; under webpack they are factory-local and
+    // invisible to those consumers. The `^` anchor ensures indented inside-define
+    // declarations (e.g. LeftMenu.js line 50: `    var SCALE_MIN`) are not promoted.
+    {
+      search: '^var ([A-Z][A-Z0-9_]+) = ',
+      replace: 'var $1 = window.$1 = ',
+      flags: 'gm',
+    },
+    // keymaster.js UMD export guard: bare `key` has no lexical declaration in scope;
+    // assignKey is the correct local function reference (set as global.key on line 348).
+    {
+      search: "if(typeof module !== 'undefined') module.exports = key;",
+      replace: "if(typeof module !== 'undefined') module.exports = assignKey;",
+    },
+    // keymaster.js wraps everything in (function(global){...})(this). Under a webpack
+    // factory, `this` is NOT window — so global.key = assignKey never reaches window.key,
+    // and all callers of window.key.* (Shortcuts.js, DocumentHolderExt.js, Toolbar.js)
+    // get TypeError on undefined. Explicitly mirror the assignment to window.
+    // `global.key = assignKey` is unique to keymaster.js across the entire codebase.
+    {
+      search: 'global.key = assignKey;',
+      replace: 'global.key = assignKey; window.key = assignKey;',
+    },
     { search: tok('PRODUCT_VERSION'),         replace: productVersion,                                                                      flags: 'g' },
     { search: tok('APP_TITLE_TEXT'),           replace: tv(process.env.APP_TITLE_TEXT,           'app_title',               'ONLYOFFICE'),  flags: 'g' },
     { search: tok('COMPANY_NAME'),             replace: tv(process.env.COMPANY_NAME,             'company_name',            'ONLYOFFICE'),  flags: 'g' },
