@@ -273,7 +273,6 @@
         };
     </script>
 
-    <!--<inline src="../../common/main/resources/img/header/buttons.svg" />-->
     <inline src="../../common/main/resources/img/toolbar/charttypes.svg" />
     <inline src="resources/img/toolbar/BorderSize.svg" />
 
