@@ -57,6 +57,38 @@ export function themeGlobalVars(env, editor) {
 }
 
 /**
+ * Returns string-replace-loader 'multiple' entries for {{TOKEN}} → value substitution.
+ * Handles tokens inside string literals that DefinePlugin cannot reach (it only rewrites
+ * bare AST identifiers). productVersion is passed in because BUILD_NUMBER is already
+ * computed in each webpack config alongside BannerPlugin.
+ */
+export function themeReplacements(productVersion) {
+  function tok(name) { return `\\{\\{${name}\\}\\}`; }
+  function tv(envVal, metaKey, def) { return themeVal(envVal, metaKey, def); }
+  return [
+    { search: tok('PRODUCT_VERSION'),         replace: productVersion,                                                                      flags: 'g' },
+    { search: tok('APP_TITLE_TEXT'),           replace: tv(process.env.APP_TITLE_TEXT,           'app_title',               'ONLYOFFICE'),  flags: 'g' },
+    { search: tok('COMPANY_NAME'),             replace: tv(process.env.COMPANY_NAME,             'company_name',            'ONLYOFFICE'),  flags: 'g' },
+    { search: tok('PUBLISHER_NAME'),           replace: tv(process.env.PUBLISHER_NAME,           'publisher_name',          'Ascensio System SIA'), flags: 'g' },
+    { search: tok('PUBLISHER_URL'),            replace: tv(process.env.PUBLISHER_URL,            'publisher_url',           'https://www.onlyoffice.com'), flags: 'g' },
+    { search: tok('PUBLISHER_ADDRESS'),        replace: tv(process.env.PUBLISHER_ADDRESS,        'publisher_address',       '20A-12 Ernesta Birznieka-Upisha street, Riga, Latvia, EU, LV-1050'), flags: 'g' },
+    { search: tok('PUBLISHER_PHONE'),          replace: tv(process.env.PUBLISHER_PHONE,          'publisher_phone',         '+371 633-99867'), flags: 'g' },
+    { search: tok('SUPPORT_EMAIL'),            replace: tv(process.env.SUPPORT_EMAIL,            'support_email',           'support@onlyoffice.com'), flags: 'g' },
+    { search: tok('SUPPORT_URL'),              replace: tv(process.env.SUPPORT_URL,              'support_url',             'https://support.onlyoffice.com'), flags: 'g' },
+    { search: tok('SALES_EMAIL'),              replace: tv(process.env.SALES_EMAIL,              'sales_email',             'sales@onlyoffice.com'), flags: 'g' },
+    { search: tok('ATTRIBUTION'),              replace: tv(process.env.ATTRIBUTION,              'attribution',             ''),            flags: 'g' },
+    { search: tok('HELP_URL'),                 replace: tv(process.env.HELP_URL,                 'help_url',                ''),            flags: 'g' },
+    { search: tok('HELP_CENTER_WEB_DE'),       replace: tv(process.env.HELP_CENTER_WEB_DE,       'help_center_web_de',      ''),            flags: 'g' },
+    { search: tok('HELP_CENTER_WEB_SSE'),      replace: tv(process.env.HELP_CENTER_WEB_SSE,      'help_center_web_sse',     ''),            flags: 'g' },
+    { search: tok('HELP_CENTER_WEB_PE'),       replace: tv(process.env.HELP_CENTER_WEB_PE,       'help_center_web_pe',      ''),            flags: 'g' },
+    { search: tok('HELP_CENTER_WEB_VE'),       replace: tv(process.env.HELP_CENTER_WEB_VE,       'help_center_web_ve',      ''),            flags: 'g' },
+    { search: tok('DEFAULT_LANG'),             replace: tv(process.env.DEFAULT_LANG,             'default_lang',            'en') || 'en', flags: 'g' },
+    { search: tok('SUGGEST_URL'),              replace: tv(process.env.SUGGEST_URL,              'suggest_url',             ''),            flags: 'g' },
+    { search: tok('API_URL_EDITING_CALLBACK'), replace: tv(process.env.API_URL_EDITING_CALLBACK, 'api_url_editing_callback',''),            flags: 'g' },
+  ];
+}
+
+/**
  * Returns DefinePlugin brand value overrides.
  * Priority: env var > config.json > stock default. Empty string in config.json
  * is respected (renders nothing / hides the row in guarded views).

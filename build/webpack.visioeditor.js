@@ -32,7 +32,7 @@ import { fileURLToPath } from 'url';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 import TerserPlugin from 'terser-webpack-plugin';
 import CopyWebpackPlugin from 'copy-webpack-plugin';
-import { themeDefines, themeGlobalVars } from './theme.config.mjs';
+import { themeDefines, themeGlobalVars, themeReplacements } from './theme.config.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -134,6 +134,13 @@ export default {
         noParse: /apps[/\\]common[/\\]locale\.js$/,
 
         rules: [
+            {
+                test: /\.js$/,
+                include: APPS_ROOT,
+                loader: 'string-replace-loader',
+                options: { multiple: themeReplacements(productVersion) },
+            },
+
             // LaunchController.js:46 uses require({waitSeconds:0}, dynamicArray, cb) —
             // the require.js 3-arg config+deps+callback form. webpack AMD parser errors.
             // In webpack world DocumentServer loads code.js separately; the call is

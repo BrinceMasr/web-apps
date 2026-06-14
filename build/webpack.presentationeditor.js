@@ -19,7 +19,7 @@ import { fileURLToPath } from 'url';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 import TerserPlugin from 'terser-webpack-plugin';
 import CopyWebpackPlugin from 'copy-webpack-plugin';
-import { themeDefines, themeGlobalVars } from './theme.config.mjs';
+import { themeDefines, themeGlobalVars, themeReplacements } from './theme.config.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -98,6 +98,12 @@ export default {
         noParse: /apps[/\\]common[/\\]locale\.js$/,
 
         rules: [
+            {
+                test: /\.js$/,
+                include: APPS_ROOT,
+                loader: 'string-replace-loader',
+                options: { multiple: themeReplacements(productVersion) },
+            },
             {
                 test: /controller[/\\]LaunchController\.js$/,
                 parser: { amd: false },
