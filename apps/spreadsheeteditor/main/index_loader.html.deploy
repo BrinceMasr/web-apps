@@ -317,6 +317,7 @@
             waitSeconds: 30,
             baseUrl: window.customBaseUrl || "../../",
             paths: {
+                app:           "spreadsheeteditor/main/app",
                 sdk:           "../../sdkjs/cell/sdk-all-min",
                 socketio:      "../vendor/socketio/socket.io.min",
                 xregexp:       "../vendor/xregexp/xregexp-all-min",
