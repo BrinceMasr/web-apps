@@ -6,11 +6,12 @@
  * build system changes. Run against the deployed output directory.
  *
  * Usage:
- *   node baseline.js [output-dir] [--write] [--diff baseline.json]
+ *   node baseline.js [output-dir] [--write] [--diff baseline.json] [--scan-tokens]
  *
- * output-dir: path to web-apps/apps (default: /var/www/onlyoffice/documentserver/web-apps/apps)
- * --write:    write snapshot to baseline.json in cwd
- * --diff <f>: compare current output against a saved baseline.json
+ * output-dir:    path to web-apps/apps (default: /var/www/onlyoffice/documentserver/web-apps/apps)
+ * --write:       write snapshot to baseline.json in cwd
+ * --diff <f>:    compare current output against a saved baseline.json
+ * --scan-tokens: scan .js and .css output files for unreplaced {{TOKEN}} strings
  *
  * Tiers:
  *   1. MODULE MANIFEST  — named define() calls extracted from each JS bundle.
@@ -34,9 +35,16 @@ const DEFAULT_DIR = '/var/www/onlyoffice/documentserver/web-apps/apps';
 const SIZE_TOLERANCE = 0.15;  // ±15%
 const SIZE_FLOOR     = 0.50;  // <50% of baseline is always a hard failure
 
+// DefinePlugin rewrites bare AST identifiers only — it cannot reach {{TOKEN}} inside string literals.
+// Any surviving mustache token in .js/.css output is an absolute build failure, no baseline needed.
+// .json is excluded: locale files use {{...}} for runtime i18n interpolation (not a bug).
+const TOKEN_RE   = /\{\{[A-Z][A-Z0-9_]*\}\}/g;
+const TOKEN_EXTS = new Set(['.js', '.css']);
+
 // --- CLI args ---
 const args      = process.argv.slice(2);
 const writeFlag = args.includes('--write');
+const scanFlag  = args.includes('--scan-tokens');
 const diffIdx   = args.indexOf('--diff');
 const diffFile  = diffIdx !== -1 ? args[diffIdx + 1] : null;
 const dirArg    = args.find(a => !a.startsWith('--') && a !== (diffFile || ''));
@@ -98,6 +106,23 @@ function classify(filePath, relFilePath) {
     if (ext === '.svg') return 'hash';    // static SVGs (copied, not generated)
     if (HASH_EXTS.has(ext)) return 'hash';
     return 'size'; // default: track size for anything else (.png, .txt, etc.)
+}
+
+// --- Token scan ---
+function scanTokens(dir) {
+    const files    = walkDir(dir);
+    const findings = [];
+    for (const full of files) {
+        const ext = path.extname(full).toLowerCase();
+        if (!TOKEN_EXTS.has(ext)) continue;
+        const content = fs.readFileSync(full, 'utf8');
+        TOKEN_RE.lastIndex = 0;
+        const tokens = new Set();
+        let m;
+        while ((m = TOKEN_RE.exec(content)) !== null) tokens.add(m[0]);
+        if (tokens.size) findings.push({ file: relPath(full), tokens: [...tokens].sort() });
+    }
+    return findings;
 }
 
 // --- Capture snapshot ---
@@ -210,7 +235,22 @@ function diff(baseline, current) {
 }
 
 // --- Main ---
-if (diffFile) {
+if (scanFlag) {
+    console.log(`Scanning for unreplaced {{TOKEN}} strings in ${ROOT}...`);
+    const findings = scanTokens(ROOT);
+    if (findings.length === 0) {
+        console.log('\nResult: PASSED — no unreplaced tokens found');
+    } else {
+        console.log('\nFAILURES:');
+        for (const { file, tokens } of findings) {
+            console.log(`  ✗ ${file}`);
+            for (const t of tokens) console.log(`      ${t}`);
+        }
+        const total = findings.reduce((n, f) => n + f.tokens.length, 0);
+        console.log(`\nResult: FAILED — ${total} unreplaced token(s) in ${findings.length} file(s)`);
+        process.exit(1);
+    }
+} else if (diffFile) {
     if (!fs.existsSync(diffFile)) {
         console.error(`ERROR: baseline file not found: ${diffFile}`);
         process.exit(1);
