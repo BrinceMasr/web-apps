@@ -52,10 +52,11 @@ jobs:
               cd web-apps/build
               THEME=euro-office grunt --skip-imagemin
 
-          - name: Run webpack (documenteditor, spreadsheeteditor, presentationeditor)
+          - name: Run webpack (documenteditor, spreadsheeteditor, presentationeditor, visioeditor)
             run: |
               cd web-apps/build
               THEME=euro-office npx webpack --config webpack.documenteditor.js &
               THEME=euro-office npx webpack --config webpack.spreadsheeteditor.js &
               THEME=euro-office npx webpack --config webpack.presentationeditor.js &
+              THEME=euro-office npx webpack --config webpack.visioeditor.js &
               wait

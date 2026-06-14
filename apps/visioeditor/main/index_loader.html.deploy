@@ -314,6 +314,15 @@
 
         var require = {
             waitSeconds: 30,
+            baseUrl: window.customBaseUrl || "../../",
+            paths: {
+                sdk:           "../../sdkjs/visio/sdk-all-min",
+                socketio:      "../vendor/socketio/socket.io.min",
+                xregexp:       "../vendor/xregexp/xregexp-all-min",
+                allfonts:      "../../sdkjs/common/AllFonts",
+                coapisettings: "coapisettings",
+                api:           "api/documents/api"
+            },
             callback: function(){
                 clearTimeout(requireTimeoutID);
             }
