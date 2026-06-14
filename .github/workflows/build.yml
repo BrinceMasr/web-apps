@@ -52,7 +52,27 @@ jobs:
               cd web-apps/build
               THEME=euro-office grunt --skip-imagemin
 
-          - name: Baseline diff
+          - name: Run webpack (documenteditor, spreadsheeteditor, presentationeditor)
             run: |
-              node web-apps/build/scripts/baseline.js deploy/web-apps/apps \
-                --diff web-apps/build/scripts/baseline.json
+              cd web-apps/build
+              THEME=euro-office npx webpack --config webpack.documenteditor.js &
+              THEME=euro-office npx webpack --config webpack.spreadsheeteditor.js &
+              THEME=euro-office npx webpack --config webpack.presentationeditor.js &
+              wait
+
+          - name: Token scan
+            run: |
+              node web-apps/build/scripts/baseline.js web-apps/deploy/web-apps/apps \
+                --scan-tokens
+
+          - name: Capture baseline (re-baselining after grunt+webpack dual-build)
+            run: |
+              node web-apps/build/scripts/baseline.js web-apps/deploy/web-apps/apps \
+                --write
+              mv baseline.json web-apps/build/scripts/baseline-ci.json
+
+          - name: Upload baseline artifact
+            uses: actions/upload-artifact@v4
+            with:
+                name: baseline-ci
+                path: web-apps/build/scripts/baseline-ci.json
