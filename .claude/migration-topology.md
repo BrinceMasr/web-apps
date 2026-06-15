@@ -120,8 +120,14 @@ Both must be done before Phase E. Order: Gap 2 first (vendor copy is a prerequis
 2. `git rm build/appforms.js`
 3. Remove grunt + grunt-plugin devDeps from `build/package.json`
 4. Assess `build/*.json` configs — keep if webpack references them, delete if grunt-only
-5. Remove grunt step from `.github/workflows/build.yml`
-6. Remove grunt call from Makefile (DocumentServer repo)
+5. Remove grunt step from `.github/workflows/build.yml` — replace with:
+   ```
+   PRODUCT_VERSION=${{ env.PRODUCT_VERSION }} BUILD_ROOT=... node scripts/deploy-common.js
+   BUILD_ROOT=... node scripts/deploy-html.js
+   BUILD_ROOT=... node scripts/inline-svgs.js
+   ```
+   `PRODUCT_VERSION` **must** be set — deploy-common.js uses it for api.js. Without it, api.js reports `4.3.0`, eurooffice rejects `< 6`, no editors load.
+6. Remove grunt call from Makefile (DocumentServer repo) — same: pass `PRODUCT_VERSION=$(PRODUCT_VERSION)`
 7. `npm install` in `build/` to update `package-lock.json`
 8. Full CI run — must be green
 9. Smoke test all 6 editors in eo container
