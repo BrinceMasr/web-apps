@@ -55,7 +55,8 @@ if (!BUILD_ROOT) {
 }
 
 const COMMON_JSON    = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'build', 'common.json'), 'utf8'));
-const PKG_VERSION    = COMMON_JSON.version;
+// Mirror Gruntfile line 358: process.env['PRODUCT_VERSION'] takes precedence over common.json.
+const PKG_VERSION    = process.env.PRODUCT_VERSION || COMMON_JSON.version;
 const CUSTOMER_NAME  = process.env.APP_CUSTOMER_NAME || 'ONLYOFFICE';
 const APPS_SRC       = path.join(REPO_ROOT, 'apps');
 const VENDOR_SRC     = path.join(REPO_ROOT, 'vendor');
@@ -129,10 +130,10 @@ function copyDir(srcDir, destDir) {
     copyDirFiltered(srcDir, destDir);
 }
 
-// Replace tokens in every .js file under dir.
-function replaceTokensInJS(dir, replacements) {
+// Replace tokens in every file under dir that matches the given extensions.
+function replaceTokensIn(dir, replacements, { exts = ['.js'] } = {}) {
     for (const [rel, abs] of walkDir(dir)) {
-        if (!rel.endsWith('.js')) continue;
+        if (!exts.some(e => rel.endsWith(e))) continue;
         let content = fs.readFileSync(abs, 'utf8');
         let changed  = false;
         for (const [from, to] of replacements) {
@@ -141,6 +142,10 @@ function replaceTokensInJS(dir, replacements) {
         }
         if (changed) fs.writeFileSync(abs, content, 'utf8');
     }
+}
+
+function replaceTokensInJS(dir, replacements) {
+    replaceTokensIn(dir, replacements, { exts: ['.js'] });
 }
 
 // Optimise and write a single SVG file using svgo.
@@ -244,6 +249,11 @@ function deployAPI() {
         [/\{\{APP_CUSTOMER_NAME\}\}/g, CUSTOMER_NAME],
     ]);
 
+    // replicate grunt's replace:cachescripts — substitute @@SRC_ROOT@@ in api HTML files
+    replaceTokensIn(apiOut, [
+        [/@@SRC_ROOT@@/g, REPO_ROOT],
+    ], { exts: ['.html'] });
+
     console.log('deploy-common: api done');
 }
 
@@ -276,16 +286,14 @@ async function deployAppsCommon() {
         }
     );
 
-    // indexhtml: *.html.deploy → *.html
-    const htmlSrcDir = src;
-    const htmlOutDir = out;
-    ensureDir(htmlOutDir);
-    for (const f of fs.readdirSync(htmlSrcDir)) {
+    // indexhtml: *.html.deploy → *.html with @@SRC_ROOT@@ substitution
+    // (mirrors grunt's copy:indexhtml + replace:indexhtml for apps/common/)
+    ensureDir(out);
+    for (const f of fs.readdirSync(src)) {
         if (!f.endsWith('.html.deploy')) continue;
-        fs.copyFileSync(
-            path.join(htmlSrcDir, f),
-            path.join(htmlOutDir, f.replace('.html.deploy', '.html'))
-        );
+        const content  = fs.readFileSync(path.join(src, f), 'utf8');
+        const replaced = content.replace(/@@SRC_ROOT@@/g, REPO_ROOT);
+        fs.writeFileSync(path.join(out, f.replace('.html.deploy', '.html')), replaced, 'utf8');
     }
 
     // images: svgo for SVGs (replaces grunt-svgmin), sharp for rasters (replaces grunt-contrib-imagemin)

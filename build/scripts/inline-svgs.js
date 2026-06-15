@@ -41,6 +41,7 @@ const DIRS = [
     { editor: 'pdfeditor',          subpath: 'main'  },
     { editor: 'visioeditor',        subpath: 'main'  },
     { editor: 'documenteditor',     subpath: 'forms' },
+    { editor: 'common',             subpath: ''      },
 ];
 
 // Mirror grunt-inline's exact regexes.

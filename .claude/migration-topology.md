@@ -24,7 +24,7 @@ Use this file to orient quickly at the start of a session without re-reading git
 | `build/scripts/inline-svgs.js` | earlier | **permanent infrastructure** — replaces grunt-inline's `<inline src="..."/>` SVG injection. Globs `*.html` in each editor's main BUILD_ROOT dir. Run after grunt, before webpack in CI and Makefile. Hard-fails on missing SVGs or zero substitutions. |
 | `build/scripts/deploy-theme-images.js` | `72c711da4f` | Phase A — replaces grunt `deploy-theme-images`. Copies `theme/{THEME}/assets/img/**` to common + each editor mobile dir. Conditionally copies embed logo. Soft-skips if theme img dir absent. |
 | `build/scripts/deploy-embed.js` | `af958d16e1` | Phase B — replaces grunt `embed-app-init` for doc, spreadsheet, presentation, visio (NOT pdf). Steps: clean → terser concat+minify JS → less.render CSS → copy locale + HTML → `@@SRC_ROOT@@` replace → inline `?__inline=true` scripts → rm img dir. Added `less` dep to `build/package.json`. |
-| `build/scripts/deploy-common.js` | `5b943c6304` | **Gap 2** — replaces 14 grunt common.json deploy tasks: sdk (sdkjs-assets copy), api (copy + `{{PRODUCT_VERSION}}` token replace), apps-common (alphabetletters/themes/help/images/SVGs), jquery, megapixel, socketio, xregexp, underscore, iscroll, fetch, es6-promise, requirejs (terser minify), common-embed, monaco. Images copied without imagemin/svgmin optimisation. Add to CI/Makefile in Phase E. |
+| `build/scripts/deploy-common.js` | `5b943c6304` | **Gap 2** — replaces 14 grunt common.json deploy tasks: sdk (sdkjs-assets copy), api (copy + `{{PRODUCT_VERSION}}` token replace + `@@SRC_ROOT@@` in HTML files), apps-common (alphabetletters/themes/help/images/SVGs/HTML with `@@SRC_ROOT@@` replacement), jquery, megapixel, socketio, xregexp, underscore, iscroll, fetch, es6-promise, requirejs (terser minify), common-embed, monaco. **Requires `PRODUCT_VERSION` env var** (e.g. `9.2.1`) — see `.claude/findings/deploy-common-bugs.md`. Runtime-validated 2026-06-15 (all 6 editors load). Add to CI/Makefile in Phase E. |
 | `build/scripts/deploy-html.js` | this session | **Gap 1** — replaces grunt's `copy:indexhtml` + `replace:indexhtml`. Copies `*.html.deploy` → `*.html` and substitutes `@@SRC_ROOT@@` for all 6 editor dirs (5 editors/main + documenteditor/forms). No `{{TOKEN}}` replacements in HTML — those are JS-only, handled by webpack's string-replace-loader. Must run before `inline-svgs.js`. Add to CI/Makefile in Phase E. |
 | `build/scripts/baseline.js` | `6633d584`, extended `d22a89a3` | **MIGRATION TOOL — remove at completion.** Build-output snapshot/diff. `--scan-tokens` scans .js/.css for unreplaced `{{TOKEN}}` strings. |
 | `build/scripts/baseline.json` | `24f9a049` | **MIGRATION TOOL — remove at completion.** Baseline snapshot from grunt build. |
@@ -85,13 +85,15 @@ Commit `e5b09e3` adds to both `web-apps` and `web-apps-dev` targets (after grunt
 
 All steps pass on self-hosted runner. Confirmed clean via `make web-apps-dev` in eo container:
 - grunt: all editors (doc, spreadsheet, presentation, pdf, visio) — ~5m (sequential)
-- inline-svgs: 11 HTML files, 108 substitutions — <1s
+- inline-svgs: 12 HTML files, 115 substitutions (includes apps/common/) — <1s
 - deploy-theme-images: embed logo + common/mobile images — <1s
 - deploy-embed: 4 editors — ~2s
 - mobile: 4 editors in parallel — ~50s (npm install cached after first run)
 - webpack: 6 configs in parallel — doc 30s, spreadsheet 31s, presentation 28s, visio 18s, pdf 27s, forms 14s
 
 During transition, mobile builds twice: once via grunt's `exec:webpack_app_build` (sequential), once via our new parallel block. Both produce identical output. The duplicate run disappears in Phase E when grunt's mobile task is removed.
+
+**Overwrite test validated 2026-06-15**: running deploy-common.js (with `PRODUCT_VERSION=9.2.1`) → deploy-html.js → inline-svgs.js in the eo container produces all 6 working editors. Three bugs found and fixed — see `.claude/findings/deploy-common-bugs.md`.
 
 ---
 
@@ -107,8 +109,8 @@ During transition, mobile builds twice: once via grunt's `exec:webpack_app_build
 
 | Gap | Script | Replaces | Status |
 |-----|--------|---------|--------|
-| **Gap 2** | `build/scripts/deploy-common.js` | 14 grunt sub-tasks: vendor scripts, API, SDK assets, apps-common HTML copy | **written** — add to CI/Makefile in Phase E |
-| **Gap 1** | `build/scripts/deploy-html.js` | `deploy-app-main`: `*.html.deploy` → `.html`, `@@SRC_ROOT@@` replacement | **written** — add to CI/Makefile in Phase E, must run before inline-svgs.js |
+| **Gap 2** | `build/scripts/deploy-common.js` | 14 grunt sub-tasks: vendor scripts, API, SDK assets, apps-common HTML copy | **runtime-validated** (2026-06-15, all 6 editors) — add to CI/Makefile in Phase E |
+| **Gap 1** | `build/scripts/deploy-html.js` | `deploy-app-main`: `*.html.deploy` → `.html`, `@@SRC_ROOT@@` replacement | **runtime-validated** — add to CI/Makefile in Phase E, must run before inline-svgs.js |
 
 Both must be done before Phase E. Order: Gap 2 first (vendor copy is a prerequisite for the editors to boot), then Gap 1.
 

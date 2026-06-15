@@ -36,6 +36,8 @@ Full plan: `migration-plan.md` (untracked, local only — not committed per proj
 | [`webpack5-toplevel-var-constants.md`](.claude/findings/webpack5-toplevel-var-constants.md) | `var c_*` constants outside `define()` invisible as globals (~30 consumers) |
 | [`webpack5-backbone-underscore-safe.md`](.claude/findings/webpack5-backbone-underscore-safe.md) | Backbone/Underscore are SAFE — do not add fixes for them |
 | [`webpack5-bare-common-global-contract.md`](.claude/findings/webpack5-bare-common-global-contract.md) | 58 files use bare `Common.*` — load-order invariant |
+| [`deploy-html-inline-ordering.md`](.claude/findings/deploy-html-inline-ordering.md) | `deploy-html.js` must be followed immediately by `inline-svgs.js` — running deploy-html alone leaves `?__inline=true` script tags as unreachable filesystem URLs → "Not supported version" / blank page on all editors |
+| [`deploy-common-bugs.md`](.claude/findings/deploy-common-bugs.md) | Three bugs found in deploy-common.js during overwrite test: (1) `PRODUCT_VERSION` env var ignored → api.js reports `4.3.0`, eurooffice rejects `< 6`; (2) `@@SRC_ROOT@@` not replaced in `apps/common/*.html`; (3) `inline-svgs.js` must cover `apps/common/` — all fixed |
 
 ## Parked / known issues (not blocking)
 
