@@ -48,3 +48,6 @@ apps/common/mobile/resources/less/_theme-mobile-overrides.less
 .claude/pr-reviews.md
 .claude/pr77-fixes.md
 .claude/mobile-build-index-html.md
+
+# Claude session notes — local only
+.claude/
