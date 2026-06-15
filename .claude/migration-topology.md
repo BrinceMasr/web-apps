@@ -114,7 +114,7 @@ Both grunt and webpack steps pass on the self-hosted runner. Confirmed clean:
 ## Known gaps (as of 2026-06-14)
 
 - **grunt-inline SVG sprite injection** — still done by grunt; webpack output has data-uri "file not found" warnings because sprites aren't present at webpack build time. Needed before grunt can be fully retired for the three active editors.
-- **pdfeditor + appforms webpack configs** — deferred; not in Euro Office active editor set.
+- **pdfeditor webpack config** — `build/webpack.pdfeditor.mjs` added and runtime-validated (`app:ready` fires, code.js loads, document renders). PRODUCT_VERSION mismatch was the root cause of skeleton UI; see `findings/webpack5-pdfeditor-runtime-debug.md`. appforms config still deferred.
 - **`mangle: false` revisit** — intentional safety choice now; inflates bundle size vs grunt baseline. Revisit after performance baseline is established.
 - **Config triplication** — three webpack configs near-identical. Consider `webpack.editor.factory.mjs(editorName, sdkPath)`.
 - **`baseline.js` --scan-tokens** — migration tool, run locally only. Must be removed from repo at migration completion.
