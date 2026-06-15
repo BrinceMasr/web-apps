@@ -34,12 +34,13 @@ const BUILD_ROOT = process.env.BUILD_ROOT
 
 const APPS_OUT = path.join(BUILD_ROOT, 'web-apps', 'apps');
 
-const EDITORS = [
-    'documenteditor',
-    'spreadsheeteditor',
-    'presentationeditor',
-    'pdfeditor',
-    'visioeditor',
+const DIRS = [
+    { editor: 'documenteditor',     subpath: 'main'  },
+    { editor: 'spreadsheeteditor',  subpath: 'main'  },
+    { editor: 'presentationeditor', subpath: 'main'  },
+    { editor: 'pdfeditor',          subpath: 'main'  },
+    { editor: 'visioeditor',        subpath: 'main'  },
+    { editor: 'documenteditor',     subpath: 'forms' },
 ];
 
 // Mirror grunt-inline's exact regexes.
@@ -98,25 +99,24 @@ function processFile(htmlPath) {
     }
 }
 
-for (const editor of EDITORS) {
-    const editorDir = path.join(APPS_OUT, editor, 'main');
+for (const { editor, subpath } of DIRS) {
+    const editorDir = path.join(APPS_OUT, editor, subpath);
 
     if (!fs.existsSync(editorDir)) {
-        console.error(`inline: missing dir ${editorDir} — grunt copy may not have run`);
+        console.error(`inline: missing dir ${editorDir} — deploy-html.js may not have run`);
         process.exitCode = 1;
         continue;
     }
 
-    // Exclude *.reporter.html — grunt's deploy-reporter task owns those files and
-    // already ran inline on them. Double-processing is safe today (device_scale.js
-    // can't resolve so it's a no-op) but would silently re-process any future
-    // resolvable __inline script in the reporter template.
+    // Exclude *.reporter.html — grunt's deploy-reporter task owns those and already
+    // ran inline on them. Double-processing is safe today but would silently
+    // re-process any future resolvable __inline script in the reporter template.
     const htmlFiles = fs.readdirSync(editorDir)
         .filter(f => f.endsWith('.html') && !f.includes('.reporter.'))
         .map(f => path.join(editorDir, f));
 
     if (htmlFiles.length === 0) {
-        console.error(`inline: no .html files in ${editorDir} — grunt copy may have failed`);
+        console.error(`inline: no .html files in ${editorDir} — deploy-html.js may have failed`);
         process.exitCode = 1;
         continue;
     }
@@ -126,7 +126,7 @@ for (const editor of EDITORS) {
         processFile(file);
     }
     if (totalSubstitutions === beforeEditor) {
-        console.error(`inline: no substitutions in ${editor} — template may have moved or tags changed`);
+        console.error(`inline: no substitutions in ${editor}/${subpath} — template may have moved or tags changed`);
         process.exitCode = 1;
     }
 }
