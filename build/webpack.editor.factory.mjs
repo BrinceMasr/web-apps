@@ -74,6 +74,10 @@ export function editorConfig(editorName, opts = {}) {
     return {
         mode: env,
 
+        cache: {
+            type: 'filesystem',
+        },
+
         entry: {
             app: {
                 import: [

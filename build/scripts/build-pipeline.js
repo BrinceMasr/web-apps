@@ -26,8 +26,7 @@
 //   BUILD_ROOT       default: ../deploy (matches grunt's default)
 //   BUILD_NUMBER     default: GITHUB_RUN_NUMBER, then common.json.build
 //   THEME            default: default
-//   SKIP_MOBILE      set to 1 to skip framework7-react builds (faster local iteration)
-//   SKIP_WEBPACK     set to 1 to skip webpack (for script-only changes)
+//   SKIP_MOBILE      set to 1 to skip framework7-react builds (~50s saved)
 //
 // Phase layout (wall-clock optimised):
 //   Phase 1 — all parallel:
@@ -68,8 +67,7 @@ const BUILD_NUMBER = String(
 
 const THEME = process.env.THEME || 'default';
 
-const SKIP_MOBILE  = process.env.SKIP_MOBILE  === '1';
-const SKIP_WEBPACK = process.env.SKIP_WEBPACK === '1';
+const SKIP_MOBILE = process.env.SKIP_MOBILE === '1';
 
 // Env passed to every child process
 const CHILD_ENV = {
@@ -181,7 +179,6 @@ async function main() {
         `  BUILD_NUMBER     ${BUILD_NUMBER}`,
         `  THEME            ${THEME}`,
         `  SKIP_MOBILE      ${SKIP_MOBILE}`,
-        `  SKIP_WEBPACK     ${SKIP_WEBPACK}`,
         '',
     ].join('\n'));
 
@@ -196,11 +193,9 @@ async function main() {
         task('deploy-embed',      node,   ['scripts/deploy-embed.js']),
     ];
 
-    if (!SKIP_WEBPACK) {
-        for (const cfg of WEBPACK_CONFIGS) {
-            const name = cfg.replace('webpack.', '').replace('.mjs', '');
-            phase1Tasks.push(task(`webpack:${name}`, wp, ['--config', cfg]));
-        }
+    for (const cfg of WEBPACK_CONFIGS) {
+        const name = cfg.replace('webpack.', '').replace('.mjs', '');
+        phase1Tasks.push(task(`webpack:${name}`, wp, ['--config', cfg]));
     }
 
     if (!SKIP_MOBILE) {
