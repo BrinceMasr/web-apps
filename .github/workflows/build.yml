@@ -60,9 +60,10 @@ jobs:
           - name: Run webpack (documenteditor, spreadsheeteditor, presentationeditor, visioeditor, pdfeditor)
             run: |
               cd web-apps/build
-              THEME=euro-office npx webpack --config webpack.documenteditor.mjs &
-              THEME=euro-office npx webpack --config webpack.spreadsheeteditor.mjs &
-              THEME=euro-office npx webpack --config webpack.presentationeditor.mjs &
-              THEME=euro-office npx webpack --config webpack.visioeditor.mjs &
-              THEME=euro-office npx webpack --config webpack.pdfeditor.mjs &
-              wait
+              pids=()
+              THEME=euro-office node_modules/.bin/webpack --config webpack.documenteditor.mjs &     pids+=($!)
+              THEME=euro-office node_modules/.bin/webpack --config webpack.spreadsheeteditor.mjs &  pids+=($!)
+              THEME=euro-office node_modules/.bin/webpack --config webpack.presentationeditor.mjs & pids+=($!)
+              THEME=euro-office node_modules/.bin/webpack --config webpack.visioeditor.mjs &        pids+=($!)
+              THEME=euro-office node_modules/.bin/webpack --config webpack.pdfeditor.mjs &          pids+=($!)
+              rc=0; for pid in "${pids[@]}"; do wait "$pid" || rc=1; done; exit $rc
