@@ -72,7 +72,11 @@ function processFile(htmlPath) {
         return fs.readFileSync(filePath, 'utf8');
     });
 
-    // Pass 2: <script src="...?__inline=true"></script>
+        // Pass 2: <script src="...?__inline=true"></script>
+    // Note: grunt-inline ran uglify-js on inlined content (uglify:true). This script
+    // inlines raw source — functionally identical but output differs from the grunt
+    // baseline. Intentional: the scripts are <2KB each and the complexity of adding
+    // a minifier pass outweighs the benefit.
     result = result.replace(SCRIPT_RE, (match, src) => {
         if (!src.includes('__inline')) return match;
         if (/^https?:\/\//.test(src)) return match;
@@ -103,8 +107,12 @@ for (const editor of EDITORS) {
         continue;
     }
 
+    // Exclude *.reporter.html — grunt's deploy-reporter task owns those files and
+    // already ran inline on them. Double-processing is safe today (device_scale.js
+    // can't resolve so it's a no-op) but would silently re-process any future
+    // resolvable __inline script in the reporter template.
     const htmlFiles = fs.readdirSync(editorDir)
-        .filter(f => f.endsWith('.html'))
+        .filter(f => f.endsWith('.html') && !f.includes('.reporter.'))
         .map(f => path.join(editorDir, f));
 
     if (htmlFiles.length === 0) {
@@ -113,8 +121,13 @@ for (const editor of EDITORS) {
         continue;
     }
 
+    const beforeEditor = totalSubstitutions;
     for (const file of htmlFiles) {
         processFile(file);
+    }
+    if (totalSubstitutions === beforeEditor) {
+        console.error(`inline: no substitutions in ${editor} — template may have moved or tags changed`);
+        process.exitCode = 1;
     }
 }
 
