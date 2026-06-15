@@ -62,6 +62,11 @@ jobs:
               cd web-apps/build
               THEME=euro-office node scripts/deploy-theme-images.js
 
+          - name: Deploy embed builds
+            run: |
+              cd web-apps/build
+              node scripts/deploy-embed.js
+
           - name: Run webpack (documenteditor, spreadsheeteditor, presentationeditor, visioeditor, pdfeditor)
             run: |
               cd web-apps/build
