@@ -47,18 +47,21 @@ jobs:
               cd web-apps/translation
               python3 merge_and_check.py
 
-          - name: Run grunt
-            run: |
-              cd web-apps/build
-              THEME=euro-office grunt --skip-imagemin
-
           - name: Resolve build paths
             run: |
               cd web-apps/build
               # Inherit from runner env if set; otherwise match grunt's default (../deploy)
               echo "BUILD_ROOT=${BUILD_ROOT:-$(realpath ../deploy)}" >> $GITHUB_ENV
               # Inherit from runner env if set; otherwise read from common.json
-              echo "PRODUCT_VERSION=${PRODUCT_VERSION:-$(node -e "console.log(require('./common.json').version)")}" >> $GITHUB_ENV
+              PV="${PRODUCT_VERSION:-$(node -e "console.log(require('./common.json').version)")}"
+              PV_MAJOR="${PV%%.*}"
+              if [ "${PV_MAJOR:-0}" -lt 6 ] 2>/dev/null; then
+                echo "FATAL: PRODUCT_VERSION=${PV} (major ${PV_MAJOR} < 6) — set PRODUCT_VERSION in runner environment" >&2
+                exit 1
+              fi
+              echo "PRODUCT_VERSION=${PV}" >> $GITHUB_ENV
+              # Build number: inherit from runner (e.g. GITHUB_RUN_NUMBER) or fall back to common.json
+              echo "BUILD_NUMBER=${BUILD_NUMBER:-$(node -e "console.log(require('./common.json').build)")}" >> $GITHUB_ENV
 
           - name: Deploy common assets
             run: |

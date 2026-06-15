@@ -46,7 +46,7 @@ if (!BUILD_ROOT) {
 
 const COMMON_JSON  = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'build', 'common.json'), 'utf8'));
 const PKG_VERSION  = process.env.PRODUCT_VERSION || COMMON_JSON.version;
-const PKG_BUILD    = COMMON_JSON.build;
+const PKG_BUILD    = process.env.BUILD_NUMBER    || COMMON_JSON.build;
 const PKG_HOMEPAGE = COMMON_JSON.homepage || 'http://www.onlyoffice.com';
 
 // Mirrors grunt's copyright variable (Gruntfile:33-39).
