@@ -31,7 +31,7 @@ const BUILD_ROOT = process.env.BUILD_ROOT
 
 const APPS_ROOT   = path.resolve(__dirname, '../apps');
 const VENDOR_ROOT = path.resolve(__dirname, '../vendor');
-const OUT_DIR     = path.join(BUILD_ROOT, 'web-apps/apps/spreadsheeteditor/main');
+const OUT_DIR     = path.join(BUILD_ROOT, 'web-apps/apps/pdfeditor/main');
 
 const productVersion = process.env.PRODUCT_VERSION
     ? `${process.env.PRODUCT_VERSION}${process.env.BUILD_NUMBER ? `.${process.env.BUILD_NUMBER}` : ''}`
@@ -43,14 +43,14 @@ export default {
     entry: {
         app: {
             import: [
-                path.join(APPS_ROOT, 'spreadsheeteditor/main/resources/less/app.less'),
-                path.join(APPS_ROOT, 'spreadsheeteditor/main/app.js'),
+                path.join(APPS_ROOT, 'pdfeditor/main/resources/less/app.less'),
+                path.join(APPS_ROOT, 'pdfeditor/main/app.js'),
             ],
             library: { type: 'amd', name: 'app' },
         },
         code: {
-            import: path.join(APPS_ROOT, 'spreadsheeteditor/main/app_pack.js'),
-            library: { type: 'amd', name: 'spreadsheeteditor/main/code' },
+            import: path.join(APPS_ROOT, 'pdfeditor/main/app_pack.js'),
+            library: { type: 'amd', name: 'pdfeditor/main/code' },
         },
     },
 
@@ -140,7 +140,7 @@ export default {
                                 globalVars: {
                                     'app-image-const-path':    "'../img'",
                                     'common-image-const-path': "'../../../../common/main/resources/img'",
-                                    ...themeGlobalVars(env, 'spreadsheeteditor'),
+                                    ...themeGlobalVars(env, 'pdfeditor'),
                                 },
                             },
                         },
@@ -174,7 +174,7 @@ export default {
         new CopyWebpackPlugin({
             patterns: [
                 {
-                    from: path.join(APPS_ROOT, 'spreadsheeteditor/main/locale'),
+                    from: path.join(APPS_ROOT, 'pdfeditor/main/locale'),
                     to:   path.join(OUT_DIR, 'locale'),
                 },
             ],

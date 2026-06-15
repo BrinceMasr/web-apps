@@ -68,9 +68,7 @@ export default {
         },
         code: {
             import: path.join(APPS_ROOT, 'visioeditor/main/app_pack.js'),
-            // Shares the webpack runtime with 'app' — define()-registered
-            // classes from app.js are visible to code.js without double-bundling.
-            dependOn: 'app',
+            library: { type: 'amd', name: 'visioeditor/main/code' },
         },
     },
 

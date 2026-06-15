@@ -50,7 +50,7 @@ export default {
         },
         code: {
             import: path.join(APPS_ROOT, 'documenteditor/main/app_pack.js'),
-            dependOn: 'app',
+            library: { type: 'amd', name: 'documenteditor/main/code' },
         },
     },
 
