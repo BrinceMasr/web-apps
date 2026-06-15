@@ -19,7 +19,8 @@ import { fileURLToPath } from 'url';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 import TerserPlugin from 'terser-webpack-plugin';
 import CopyWebpackPlugin from 'copy-webpack-plugin';
-import { themeDefines, themeGlobalVars, themeReplacements } from './theme.config.mjs';
+import { assertBuildEnv, themeDefines, themeGlobalVars, themeReplacements } from './theme.config.mjs';
+assertBuildEnv();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

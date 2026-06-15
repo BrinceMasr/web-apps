@@ -39,6 +39,22 @@ function themeVal(envVal, metaKey, defaultVal) {
 }
 
 /**
+ * Asserts that PRODUCT_VERSION is set to a real version at build time.
+ * Throws at webpack config evaluation time (before any module processing)
+ * if the raw env var is missing or the sentinel value '0.0.0'.
+ * Call at the top of each webpack config, before building the config object.
+ */
+export function assertBuildEnv() {
+  const raw = process.env.PRODUCT_VERSION;
+  if (!raw || raw === '0.0.0') {
+    throw new Error(
+      `[build] PRODUCT_VERSION is ${raw ? `"${raw}"` : 'unset'} — set it to the DS version (e.g. 9.2.1).\n` +
+      '  In dev: export PRODUCT_VERSION=9.2.1'
+    );
+  }
+}
+
+/**
  * Returns additional LESS globalVars for theme logo paths.
  * @param {string} env - 'production' or 'development'
  * @param {string} editor - editor name (e.g. 'documenteditor')
