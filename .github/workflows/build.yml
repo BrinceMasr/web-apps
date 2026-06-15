@@ -10,6 +10,7 @@ jobs:
         runs-on: self-hosted
         env:
             NODE_VERSION: 20
+            PRODUCT_VERSION: 9.2.1
         steps:
 
           - name: Checkout web-apps

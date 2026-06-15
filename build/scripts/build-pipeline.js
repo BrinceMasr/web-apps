@@ -198,27 +198,22 @@ async function main() {
         phase1Tasks.push(task(`webpack:${name}`, wp, ['--config', cfg]));
     }
 
+    // Mobile: npm install first (sequential), then 4 editors in parallel.
+    // Run as a pre-phase so all 4 editor tasks appear individually in the summary.
     if (!SKIP_MOBILE) {
-        // npm install once, then parallel editor builds
-        // We chain mobile as a sequential setup → parallel run within phase 1
-        const mobileTask = (async () => {
-            const install = await task('mobile:install', 'npm',
-                ['install', '--include=dev', '--production=false'],
-                { cwd: FRAMEWORK7_DIR }
-            );
-            if (install.code !== 0) return install;
-
-            const builds = await Promise.all(
-                MOBILE_EDITORS.map(editor =>
-                    task(`mobile:${editor}`, node, ['build/build.js'],
-                        { cwd: FRAMEWORK7_DIR, env: { TARGET_EDITOR: editor, NODE_ENV: 'production' } }
-                    )
-                )
-            );
-            // Return the worst exit code
-            return builds.find(r => r.code !== 0) || builds[0];
-        })();
-        phase1Tasks.push(mobileTask);
+        const install = await task('mobile:install', 'npm',
+            ['install', '--include=dev', '--production=false'],
+            { cwd: FRAMEWORK7_DIR }
+        );
+        if (install.code !== 0) {
+            process.stderr.write(RED(`\n✗ mobile:install failed — aborting\n`));
+            process.exit(1);
+        }
+        MOBILE_EDITORS.forEach(editor =>
+            phase1Tasks.push(task(`mobile:${editor}`, node, ['build/build.js'],
+                { cwd: FRAMEWORK7_DIR, env: { TARGET_EDITOR: editor, NODE_ENV: 'production' } }
+            ))
+        );
     }
 
     const p1 = await phase('Phase 1 — parallel', phase1Tasks);
