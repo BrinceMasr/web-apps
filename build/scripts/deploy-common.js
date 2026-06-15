@@ -23,12 +23,27 @@
 // Run from web-apps/build/ instead of grunt once Phase E grunt removal is done:
 //   BUILD_ROOT=/var/www/... PRODUCT_VERSION=9.2.1 node scripts/deploy-common.js
 //
-// BUILD_ROOT must be set. Image files are copied without optimisation
-// (grunt's imagemin/svgmin steps are not replicated here).
+// BUILD_ROOT must be set.
 
 const fs   = require('fs');
 const path = require('path');
-const { minify } = require('terser');
+const { minify }   = require('terser');
+const { optimize: svgoOptimize } = require('svgo');
+const sharp        = require('sharp');
+
+// Mirrors grunt-svgmin's config exactly.
+// removeHiddenElems:false — svgo 3.2.0 deletes <symbol> elements otherwise.
+const SVGO_CONFIG = {
+    plugins: [{
+        name: 'preset-default',
+        params: {
+            overrides: {
+                cleanupIds:        false,
+                removeHiddenElems: false,
+            },
+        },
+    }],
+};
 
 const REPO_ROOT  = path.resolve(__dirname, '..', '..');
 const BUILD_ROOT = process.env.BUILD_ROOT;
@@ -128,6 +143,48 @@ function replaceTokensInJS(dir, replacements) {
     }
 }
 
+// Optimise and write a single SVG file using svgo.
+function writeSVG(srcPath, destPath) {
+    const content = fs.readFileSync(srcPath, 'utf8');
+    const result  = svgoOptimize(content, { path: srcPath, ...SVGO_CONFIG });
+    ensureDir(path.dirname(destPath));
+    fs.writeFileSync(destPath, result.data, 'utf8');
+}
+
+// Optimise and write a single raster image using sharp.
+// PNG: lossless zlib compression (matches optipng behaviour).
+// JPEG: quality 95 (near-lossless; jpegtran would be lossless but sharp always re-encodes).
+// GIF: sharp 0.33+ optimizer via libvips.
+async function writeRaster(srcPath, destPath) {
+    ensureDir(path.dirname(destPath));
+    const ext = path.extname(srcPath).toLowerCase();
+    const img = sharp(srcPath);
+    if (ext === '.png') {
+        await img.png({ compressionLevel: 9 }).toFile(destPath);
+    } else if (ext === '.jpg' || ext === '.jpeg') {
+        await img.jpeg({ quality: 95 }).toFile(destPath);
+    } else if (ext === '.gif') {
+        await img.gif().toFile(destPath);
+    }
+}
+
+// Optimise all images (SVG + raster) under srcDir into destDir, applying exclusions.
+async function optimizeImages(srcDir, destDir, { exclude = [] } = {}) {
+    const svgPromises    = [];
+    const rasterPromises = [];
+
+    for (const [rel, abs] of walkDir(srcDir)) {
+        if (exclude.length && matchesAny(rel, exclude)) continue;
+        const dest = path.join(destDir, rel);
+        if (rel.endsWith('.svg')) {
+            writeSVG(abs, dest);                        // synchronous
+        } else if (/\.(png|jpe?g|gif)$/i.test(rel)) {
+            rasterPromises.push(writeRaster(abs, dest));
+        }
+    }
+    await Promise.all(rasterPromises);
+}
+
 // ---- tasks ------------------------------------------------------------------
 
 function deploySDK() {
@@ -190,7 +247,7 @@ function deployAPI() {
     console.log('deploy-common: api done');
 }
 
-function deployAppsCommon() {
+async function deployAppsCommon() {
     const src = path.join(APPS_SRC, 'common');
     const out = path.join(BUILD_OUT, 'apps', 'common');
 
@@ -231,14 +288,11 @@ function deployAppsCommon() {
         );
     }
 
-    // images and SVGs (without optimisation — imagemin/svgmin not replicated)
-    copyDirFiltered(
+    // images: svgo for SVGs (replaces grunt-svgmin), sharp for rasters (replaces grunt-contrib-imagemin)
+    await optimizeImages(
         path.join(src, 'main', 'resources', 'img'),
         path.join(out, 'main', 'resources', 'img'),
-        {
-            include: ['**/*.{png,jpg,gif}', '**/*.svg'],
-            exclude: ['toolbar/**/*x/**/*'],
-        }
+        { exclude: ['toolbar/**/*x/**/*'] }
     );
 
     console.log('deploy-common: apps-common done');
@@ -298,7 +352,7 @@ function deployMonaco() {
 (async () => {
     deploySDK();
     deployAPI();
-    deployAppsCommon();
+    await deployAppsCommon();
 
     // vendor: simple single-file copies (name, src-relative-to-vendor/, dest-relative-to-BUILD_OUT/)
     const simpleVendors = [
