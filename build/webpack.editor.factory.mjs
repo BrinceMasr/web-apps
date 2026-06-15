@@ -35,16 +35,22 @@ import { fileURLToPath } from 'url';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 import TerserPlugin from 'terser-webpack-plugin';
 import CopyWebpackPlugin from 'copy-webpack-plugin';
-import { assertBuildEnv, themeDefines, themeGlobalVars, themeReplacements } from './theme.config.mjs';
+import { assertBuildEnv, themeDefines, themeFormVars, themeGlobalVars, themeReplacements } from './theme.config.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
- * Returns the webpack config for a desktop editor.
+ * Returns the webpack config for a desktop editor or sub-app.
  * @param {string} editorName - e.g. 'documenteditor', 'spreadsheeteditor'
+ * @param {object} opts
+ * @param {string} [opts.subpath='main']     - sub-directory under apps/<editor>/
+ * @param {string} [opts.lessEntry]          - LESS entry path (relative to APPS_ROOT);
+ *                                             defaults to <editor>/<subpath>/resources/less/app.less
  */
-export function editorConfig(editorName) {
+export function editorConfig(editorName, opts = {}) {
     assertBuildEnv();
+
+    const subpath = opts.subpath || 'main';
 
     const env = process.env.NODE_ENV || 'production';
 
@@ -54,7 +60,11 @@ export function editorConfig(editorName) {
 
     const APPS_ROOT   = path.resolve(__dirname, '../apps');
     const VENDOR_ROOT = path.resolve(__dirname, '../vendor');
-    const OUT_DIR     = path.join(BUILD_ROOT, `web-apps/apps/${editorName}/main`);
+    const OUT_DIR     = path.join(BUILD_ROOT, `web-apps/apps/${editorName}/${subpath}`);
+
+    const lessEntry = opts.lessEntry
+        ? path.join(APPS_ROOT, opts.lessEntry)
+        : path.join(APPS_ROOT, `${editorName}/${subpath}/resources/less/app.less`);
 
     // LESS compiled alongside JS; MiniCssExtractPlugin pulls it to resources/css/app.css
     const productVersion = process.env.PRODUCT_VERSION
@@ -67,14 +77,14 @@ export function editorConfig(editorName) {
         entry: {
             app: {
                 import: [
-                    path.join(APPS_ROOT, `${editorName}/main/resources/less/app.less`),
-                    path.join(APPS_ROOT, `${editorName}/main/app.js`),
+                    lessEntry,
+                    path.join(APPS_ROOT, `${editorName}/${subpath}/app.js`),
                 ],
                 library: { type: 'amd', name: 'app' },
             },
             code: {
-                import: path.join(APPS_ROOT, `${editorName}/main/app_pack.js`),
-                library: { type: 'amd', name: `${editorName}/main/code` },
+                import: path.join(APPS_ROOT, `${editorName}/${subpath}/app_pack.js`),
+                library: { type: 'amd', name: `${editorName}/${subpath}/code` },
             },
         },
 
@@ -150,7 +160,7 @@ export function editorConfig(editorName) {
                     },
                 },
                 {
-                    test: /main[/\\]app\.js$/,
+                    test: /(?:main|forms)[/\\]app\.js$/,
                     parser: { requireJs: true },
                 },
                 {
@@ -173,6 +183,9 @@ export function editorConfig(editorName) {
                                         'app-image-const-path':    "'../img'",
                                         'common-image-const-path': "'../../../../common/main/resources/img'",
                                         ...themeGlobalVars(env, editorName),
+                                        // Forms logo vars use absolute source paths for data-uri() at compile time.
+                                        // Empty for non-forms configs — vars not consumed in their LESS.
+                                        ...(subpath === 'forms' ? themeFormVars() : {}),
                                     },
                                 },
                             },
@@ -208,7 +221,7 @@ export function editorConfig(editorName) {
             new CopyWebpackPlugin({
                 patterns: [
                     {
-                        from: path.join(APPS_ROOT, `${editorName}/main/locale`),
+                        from: path.join(APPS_ROOT, `${editorName}/${subpath}/locale`),
                         to:   path.join(OUT_DIR, 'locale'),
                         // would be silently missing from the deployed package if
                         // the locale dir doesn't exist — noErrorOnMissing would hide it.

@@ -153,6 +153,20 @@ export function themeReplacements(productVersion) {
 }
 
 /**
+ * Returns LESS globalVars for the forms logo — only set when the theme provides
+ * forms_logo_light in meta/config.json. Uses absolute source paths so that
+ * less-loader's data-uri() can read the files during compilation.
+ */
+export function themeFormVars() {
+  if (!meta.forms_logo_light) return {};
+  const imgDir = path.join(rootDir, 'theme', theme, 'assets', 'img', 'header');
+  return {
+    'theme-forms-logo-light-path': `'${path.join(imgDir, meta.forms_logo_light)}'`,
+    'theme-forms-logo-dark-path':  `'${path.join(imgDir, meta.forms_logo_dark || meta.forms_logo_light)}'`,
+  };
+}
+
+/**
  * Returns DefinePlugin brand value overrides.
  * Priority: env var > config.json > stock default. Empty string in config.json
  * is respected (renders nothing / hides the row in guarded views).
