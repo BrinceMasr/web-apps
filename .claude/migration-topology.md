@@ -25,7 +25,10 @@ Use this file to orient quickly at the start of a session without re-reading git
 | `build/scripts/deploy-theme-images.js` | `72c711da4f` | Phase A — replaces grunt `deploy-theme-images`. Copies `theme/{THEME}/assets/img/**` to common + each editor mobile dir. Conditionally copies embed logo. Soft-skips if theme img dir absent. |
 | `build/scripts/deploy-embed.js` | `af958d16e1` | Phase B — replaces grunt `embed-app-init` for doc, spreadsheet, presentation, visio (NOT pdf). Steps: clean → terser concat+minify JS → less.render CSS → copy locale + HTML → `@@SRC_ROOT@@` replace → inline `?__inline=true` scripts → rm img dir. Added `less` dep to `build/package.json`. |
 | `build/scripts/deploy-common.js` | `5b943c6304` | **Gap 2** — replaces 14 grunt common.json deploy tasks: sdk (sdkjs-assets copy), api (copy + `{{PRODUCT_VERSION}}` token replace + `@@SRC_ROOT@@` in HTML files), apps-common (alphabetletters/themes/help/images/SVGs/HTML with `@@SRC_ROOT@@` replacement), jquery, megapixel, socketio, xregexp, underscore, iscroll, fetch, es6-promise, requirejs (terser minify), common-embed, monaco. **Requires `PRODUCT_VERSION` env var** (e.g. `9.2.1`) — see `.claude/findings/deploy-common-bugs.md`. Runtime-validated 2026-06-15 (all 6 editors load). Add to CI/Makefile in Phase E. |
-| `build/scripts/deploy-html.js` | this session | **Gap 1** — replaces grunt's `copy:indexhtml` + `replace:indexhtml`. Copies `*.html.deploy` → `*.html` and substitutes `@@SRC_ROOT@@` for all 6 editor dirs (5 editors/main + documenteditor/forms). No `{{TOKEN}}` replacements in HTML — those are JS-only, handled by webpack's string-replace-loader. Must run before `inline-svgs.js`. Add to CI/Makefile in Phase E. |
+| `build/scripts/deploy-html.js` | this session | **Gap 1** — replaces grunt's `copy:indexhtml` + `replace:indexhtml`. Copies `*.html.deploy` → `*.html` and substitutes `@@SRC_ROOT@@` for all 6 editor dirs (5 editors/main + documenteditor/forms). Also handles `index.reporter.html.deploy` (globs all `*.html.deploy`). Must run before `inline-svgs.js`. |
+| `build/scripts/lib/build-utils.js` | `7946cb38` | Shared helpers for all deploy scripts: `walkDir`, `copyDirFiltered`, `globToRegex`, `optimizeImages` (sharp+svgo+ico), `replaceTokensIn`, `SVGO_CONFIG`, etc. |
+| `build/scripts/deploy-resources.js` | `7924c7f8` | **Gap 3** — per-editor `main/resources` copy for all 5 desktop editors: help, non-locale localization (symboltable/watermark/numbering/formula-lang), img (sharp rasters + svgo SVGs + ico), spreadsheeteditor sdkjs cursor files, prepareHelp tokens. Reads paths from `<editor>.json`. Validated in eo container. |
+| `build/scripts/deploy-reporter.js` | `5117a7982d` | **Gap 4** — presentationeditor reporter view: terser-minifies `app.reporter.js` with copyright preamble (mangle:false, matches grunt's deploy-reporter options). HTML copy done by `deploy-html.js`; inlining done by `inline-svgs.js`. |
 | `build/scripts/baseline.js` | `6633d584`, extended `d22a89a3` | **MIGRATION TOOL — remove at completion.** Build-output snapshot/diff. `--scan-tokens` scans .js/.css for unreplaced `{{TOKEN}}` strings. |
 | `build/scripts/baseline.json` | `24f9a049` | **MIGRATION TOOL — remove at completion.** Baseline snapshot from grunt build. |
 | `build/scripts/perf-report.js` | `4d2c76da17` | **MIGRATION TOOL — remove at completion.** Captures build time, asset sizes, module counts. |
@@ -95,6 +98,8 @@ During transition, mobile builds twice: once via grunt's `exec:webpack_app_build
 
 **Overwrite test validated 2026-06-15**: running deploy-common.js (with `PRODUCT_VERSION=9.2.1`) → deploy-html.js → inline-svgs.js in the eo container produces all 6 working editors. Three bugs found and fixed — see `.claude/findings/deploy-common-bugs.md`.
 
+**Pipeline isolation caution**: Never run deploy-common.js alone against live BUILD_ROOT without completing the full pipeline through inline-svgs.js. deploy-common.js regenerates `apps/common/index.html` from the `.html.deploy` template but does NOT inline `?__inline=true` script tags — running it alone breaks the PDF viewer (`listenApiMsg is not defined`). If testing a script that doesn't touch apps/common (e.g. deploy-resources.js), deploy-common.js can be skipped, but inline-svgs.js must still run if any HTML was regenerated.
+
 ---
 
 ## Human testing notes
@@ -111,15 +116,15 @@ During transition, mobile builds twice: once via grunt's `exec:webpack_app_build
 |-----|--------|---------|--------|
 | **Gap 2** | `build/scripts/deploy-common.js` | 14 grunt sub-tasks: vendor scripts, API, SDK assets, apps-common HTML copy | **runtime-validated** (2026-06-15, all 6 editors) — add to CI/Makefile in Phase E |
 | **Gap 1** | `build/scripts/deploy-html.js` | `deploy-app-main`: `*.html.deploy` → `.html`, `@@SRC_ROOT@@` replacement | **runtime-validated** — add to CI/Makefile in Phase E, must run before inline-svgs.js |
-| **Gap 3** | `build/scripts/deploy-resources.js` (to write) | `deploy-app-main`: per-editor `main/resources/{help,symboltable,watermark,numbering,img}` + `replace:prepareHelp` | **NOT WRITTEN — Phase E blocker** — see `.claude/findings/phase-e-gap3-deploy-resources.md` |
-| **Gap 4** | `build/scripts/deploy-reporter.js` (to write) | `deploy-reporter`: `index.reporter.html` + `app.reporter.js` for presentationeditor reporter/presenter view | **NOT WRITTEN — scope confirmed in-scope (2026-06-15)** |
+| **Gap 3** | `build/scripts/deploy-resources.js` | `deploy-app-main`: per-editor `main/resources/{help,symboltable,watermark,numbering,img}` + `replace:prepareHelp` | **written, validated (2026-06-15)** — see `.claude/findings/phase-e-gap3-deploy-resources.md` |
+| **Gap 4** | `build/scripts/deploy-reporter.js` | `deploy-reporter`: `app.reporter.js` minify; HTML handled by deploy-html.js; inlining by inline-svgs.js | **written, validated (2026-06-15)** |
 
-Gaps 3 + 4 must be written and runtime-validated before Phase E can proceed.
+All 4 gaps are written and runtime-validated. Phase E step 4 (dual-run CI) is the next blocker.
 
-## Phase E checklist (do not start until Gap 1–4 done and CI-green)
+## Phase E checklist
 
-1. Write and runtime-validate `deploy-resources.js` (Gap 3)
-2. Write and runtime-validate `deploy-reporter.js` (Gap 4)
+1. ~~Write and runtime-validate `deploy-resources.js` (Gap 3)~~ — done 2026-06-15
+2. ~~Write and runtime-validate `deploy-reporter.js` (Gap 4)~~ — done 2026-06-15
 3. Insert all scripts into `.github/workflows/build.yml` alongside grunt (belt-and-suspenders run — grunt still present). CI must be green.
 4. Add `PRODUCT_VERSION` to CI job `env:` block (currently missing — latent bug; both deploy-common and webpack need it)
 5. Remove grunt step from `.github/workflows/build.yml`. Replace with script sequence:
