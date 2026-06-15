@@ -24,6 +24,7 @@ Use this file to orient quickly at the start of a session without re-reading git
 | `build/scripts/inline-svgs.js` | earlier | **permanent infrastructure** — replaces grunt-inline's `<inline src="..."/>` SVG injection. Globs `*.html` in each editor's main BUILD_ROOT dir. Run after grunt, before webpack in CI and Makefile. Hard-fails on missing SVGs or zero substitutions. |
 | `build/scripts/deploy-theme-images.js` | `72c711da4f` | Phase A — replaces grunt `deploy-theme-images`. Copies `theme/{THEME}/assets/img/**` to common + each editor mobile dir. Conditionally copies embed logo. Soft-skips if theme img dir absent. |
 | `build/scripts/deploy-embed.js` | `af958d16e1` | Phase B — replaces grunt `embed-app-init` for doc, spreadsheet, presentation, visio (NOT pdf). Steps: clean → terser concat+minify JS → less.render CSS → copy locale + HTML → `@@SRC_ROOT@@` replace → inline `?__inline=true` scripts → rm img dir. Added `less` dep to `build/package.json`. |
+| `build/scripts/deploy-common.js` | this session | **Gap 2** — replaces 14 grunt common.json deploy tasks: sdk (sdkjs-assets copy), api (copy + `{{PRODUCT_VERSION}}` token replace), apps-common (alphabetletters/themes/help/images/SVGs), jquery, megapixel, socketio, xregexp, underscore, iscroll, fetch, es6-promise, requirejs (terser minify), common-embed, monaco. Images copied without imagemin/svgmin optimisation. Add to CI/Makefile in Phase E. |
 | `build/scripts/baseline.js` | `6633d584`, extended `d22a89a3` | **MIGRATION TOOL — remove at completion.** Build-output snapshot/diff. `--scan-tokens` scans .js/.css for unreplaced `{{TOKEN}}` strings. |
 | `build/scripts/baseline.json` | `24f9a049` | **MIGRATION TOOL — remove at completion.** Baseline snapshot from grunt build. |
 | `build/scripts/perf-report.js` | `4d2c76da17` | **MIGRATION TOOL — remove at completion.** Captures build time, asset sizes, module counts. |
@@ -103,10 +104,10 @@ During transition, mobile builds twice: once via grunt's `exec:webpack_app_build
 
 ## Known gaps blocking Phase E (grunt removal)
 
-| Gap | Script to write | Replaces |
-|-----|----------------|---------|
-| **Gap 2** | `build/scripts/deploy-common.js` | 14 grunt sub-tasks: vendor scripts, API, SDK assets, apps-common HTML copy |
-| **Gap 1** | `build/scripts/deploy-html.js` | `deploy-app-main`: `*.html.deploy` → `.html`, `@@SRC_ROOT@@` + `{{TOKEN}}` replacement |
+| Gap | Script | Replaces | Status |
+|-----|--------|---------|--------|
+| **Gap 2** | `build/scripts/deploy-common.js` | 14 grunt sub-tasks: vendor scripts, API, SDK assets, apps-common HTML copy | **written** — add to CI/Makefile in Phase E |
+| **Gap 1** | `build/scripts/deploy-html.js` | `deploy-app-main`: `*.html.deploy` → `.html`, `@@SRC_ROOT@@` + `{{TOKEN}}` replacement | pending |
 
 Both must be done before Phase E. Order: Gap 2 first (vendor copy is a prerequisite for the editors to boot), then Gap 1.
 
