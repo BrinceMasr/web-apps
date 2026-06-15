@@ -109,11 +109,8 @@ for (const { editor, subpath } of DIRS) {
         continue;
     }
 
-    // Exclude *.reporter.html — grunt's deploy-reporter task owns those and already
-    // ran inline on them. Double-processing is safe today but would silently
-    // re-process any future resolvable __inline script in the reporter template.
     const htmlFiles = fs.readdirSync(editorDir)
-        .filter(f => f.endsWith('.html') && !f.includes('.reporter.'))
+        .filter(f => f.endsWith('.html'))
         .map(f => path.join(editorDir, f));
 
     if (htmlFiles.length === 0) {
