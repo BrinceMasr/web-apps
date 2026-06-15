@@ -111,26 +111,31 @@ During transition, mobile builds twice: once via grunt's `exec:webpack_app_build
 |-----|--------|---------|--------|
 | **Gap 2** | `build/scripts/deploy-common.js` | 14 grunt sub-tasks: vendor scripts, API, SDK assets, apps-common HTML copy | **runtime-validated** (2026-06-15, all 6 editors) — add to CI/Makefile in Phase E |
 | **Gap 1** | `build/scripts/deploy-html.js` | `deploy-app-main`: `*.html.deploy` → `.html`, `@@SRC_ROOT@@` replacement | **runtime-validated** — add to CI/Makefile in Phase E, must run before inline-svgs.js |
+| **Gap 3** | `build/scripts/deploy-resources.js` (to write) | `deploy-app-main`: per-editor `main/resources/{help,symboltable,watermark,numbering,img}` + `replace:prepareHelp` | **NOT WRITTEN — Phase E blocker** — see `.claude/findings/phase-e-gap3-deploy-resources.md` |
+| **Gap 4** | `build/scripts/deploy-reporter.js` (to write) | `deploy-reporter`: `index.reporter.html` + `app.reporter.js` for presentationeditor reporter/presenter view | **NOT WRITTEN — scope confirmed in-scope (2026-06-15)** |
 
-Both must be done before Phase E. Order: Gap 2 first (vendor copy is a prerequisite for the editors to boot), then Gap 1.
+Gaps 3 + 4 must be written and runtime-validated before Phase E can proceed.
 
-## Phase E checklist (do not start until Gap 1 + Gap 2 done and CI-green)
+## Phase E checklist (do not start until Gap 1–4 done and CI-green)
 
-1. `git rm build/Gruntfile.js`
-2. `git rm build/appforms.js`
-3. Remove grunt + grunt-plugin devDeps from `build/package.json`
-4. Assess `build/*.json` configs — keep if webpack references them, delete if grunt-only
-5. Remove grunt step from `.github/workflows/build.yml` — replace with:
+1. Write and runtime-validate `deploy-resources.js` (Gap 3)
+2. Write and runtime-validate `deploy-reporter.js` (Gap 4)
+3. Insert all scripts into `.github/workflows/build.yml` alongside grunt (belt-and-suspenders run — grunt still present). CI must be green.
+4. Add `PRODUCT_VERSION` to CI job `env:` block (currently missing — latent bug; both deploy-common and webpack need it)
+5. Remove grunt step from `.github/workflows/build.yml`. Replace with script sequence:
    ```
    PRODUCT_VERSION=${{ env.PRODUCT_VERSION }} BUILD_ROOT=... node scripts/deploy-common.js
+   BUILD_ROOT=... node scripts/deploy-resources.js
+   BUILD_ROOT=... node scripts/deploy-reporter.js
    BUILD_ROOT=... node scripts/deploy-html.js
    BUILD_ROOT=... node scripts/inline-svgs.js
    ```
-   `PRODUCT_VERSION` **must** be set — deploy-common.js uses it for api.js. Without it, api.js reports `4.3.0`, eurooffice rejects `< 6`, no editors load.
-6. Remove grunt call from Makefile (DocumentServer repo) — same: pass `PRODUCT_VERSION=$(PRODUCT_VERSION)`
-7. `npm install` in `build/` to update `package-lock.json`
-8. Full CI run — must be green
-9. Smoke test all 6 editors in eo container
+6. `git rm build/Gruntfile.js build/appforms.js build/testdocumenteditor.json build/testpresentationeditor.json build/testspreadsheeteditor.json build/appforms.json`
+7. Remove grunt + grunt-plugin devDeps from `build/package.json` (keep packages also used by scripts/webpack — see advisor notes)
+8. `npm install` in `build/` to update `package-lock.json`
+9. Remove grunt call from Makefile (DocumentServer repo) — same script sequence with `PRODUCT_VERSION=$(PRODUCT_VERSION)`
+10. Full CI run — must be green
+11. Smoke test all 6 editors in eo container (incognito; verify help, symbol insert, numbering presets, watermark, reporter view)
 
 ## Parked / known non-blocking issues
 
