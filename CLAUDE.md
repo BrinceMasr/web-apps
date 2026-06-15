@@ -1,18 +1,13 @@
 # Euro Office — web-apps
 
-AGPL fork of OnlyOffice DocumentServer for Nextcloud. Build system being migrated from Grunt+r.js to webpack 5.
-
-## Active work
-
-Branch `build/webpack-migration` — webpack 5 migration for desktop editors.
-Full plan: `migration-plan.md` (untracked, local only — not committed per project convention).
+AGPL fork of OnlyOffice DocumentServer for Nextcloud. Build system migrated from Grunt+r.js to webpack 5 (complete as of branch `build/webpack-migration`).
 
 ## Orientation
 
 - **Dev container**: `eo` — `make web-apps-dev` from `DocumentServer/develop/setup/`. `BUILD_ROOT=/var/www/onlyoffice/documentserver`. Makefile lives in the `DocumentServer` repo, not here.
-- **Four webpack editors**: documenteditor, spreadsheeteditor, presentationeditor, visioeditor. Configs: `build/webpack.<editor>.mjs`.
+- **Six webpack editors**: documenteditor, spreadsheeteditor, presentationeditor, visioeditor, pdfeditor, forms. Configs: `build/webpack.<editor>.mjs`.
 - **Theme contract**: `build/theme.config.mjs` exports `themeReplacements()`, `themeDefines()`, `themeGlobalVars()`. Single source of truth for all brand/token substitution. Do NOT duplicate token tables elsewhere.
-- **grunt still runs first** — grunt and webpack both write to `BUILD_ROOT`. `output.clean: false` in all webpack configs. Order is load-bearing: grunt → webpack. Reversing it or running webpack alone leaves stale grunt output.
+- **grunt is gone** — all grunt tasks replaced by `build/scripts/*.js` + webpack. Entry point: `node build/scripts/build-pipeline.js` (or `make web-apps-dev`). `output.clean: false` in all webpack configs — multiple editors share `BUILD_ROOT`, never wipe it wholesale.
 - **Service worker aggressively caches** — always test in incognito or hard-reset SW in devtools. Two `app.js` versions in devtools = cache conflict.
 - **Locale files** — changed by CI translation-merge step; large locale diffs are expected, not regressions.
 
@@ -20,9 +15,9 @@ Full plan: `migration-plan.md` (untracked, local only — not committed per proj
 
 | File | What it covers |
 |------|---------------|
-| `.claude/migration-topology.md` | Every file the migration added/changed, commit refs, known gaps |
+| `.claude/migration-topology.md` | Every file the migration added/changed, commit refs |
 | `.claude/findings/` | **Individual technical findings** — read before debugging any runtime issue |
-| `migration-plan.md` | Full step-by-step plan with advisor review log and current status |
+| `docs/webpack-migration.md` | Human-readable migration reference: gotchas, pipeline overview, known issues |
 
 ## Technical findings
 
@@ -38,7 +33,7 @@ Full plan: `migration-plan.md` (untracked, local only — not committed per proj
 | [`webpack5-bare-common-global-contract.md`](.claude/findings/webpack5-bare-common-global-contract.md) | 58 files use bare `Common.*` — load-order invariant |
 | [`deploy-html-inline-ordering.md`](.claude/findings/deploy-html-inline-ordering.md) | `deploy-html.js` must be followed immediately by `inline-svgs.js` — running deploy-html alone leaves `?__inline=true` script tags as unreachable filesystem URLs → "Not supported version" / blank page on all editors |
 | [`deploy-common-bugs.md`](.claude/findings/deploy-common-bugs.md) | Three bugs found in deploy-common.js during overwrite test: (1) `PRODUCT_VERSION` env var ignored → api.js reports `4.3.0`, eurooffice rejects `< 6`; (2) `@@SRC_ROOT@@` not replaced in `apps/common/*.html`; (3) `inline-svgs.js` must cover `apps/common/` — all fixed |
-| [`phase-e-gap3-deploy-resources.md`](.claude/findings/phase-e-gap3-deploy-resources.md) | **Phase E blocker** — grunt `deploy-app-main` copies `main/resources/{help,symboltable,watermark,numbering,img}` per editor; nothing in our scripts covers this. Must write `deploy-resources.js` before grunt removal. Also: `deploy-reporter` (presentation reporter view) may be Gap 4 — verify scope. |
+| [`phase-e-gap3-deploy-resources.md`](.claude/findings/phase-e-gap3-deploy-resources.md) | grunt `deploy-app-main` copies `main/resources/{help,symboltable,watermark,numbering,img}` per editor — replaced by `deploy-resources.js` |
 
 ## Parked / known issues (not blocking)
 

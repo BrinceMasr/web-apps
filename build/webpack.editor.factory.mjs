@@ -247,6 +247,10 @@ export function editorConfig(editorName, opts = {}) {
                         compress: {
                             drop_console: env === 'production',
                         },
+                        // mangle:false is load-bearing — 117 source files use `var Common = Common || {}`
+                        // as a namespace guard. Inside webpack's module factory `this`/global scope
+                        // differs, so the guard never fires and mangling breaks Common.* access.
+                        // See .claude/findings/webpack5-var-common-scoping.md before changing this.
                         mangle: false,
                     },
                 }),
