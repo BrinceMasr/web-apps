@@ -52,6 +52,34 @@ jobs:
               cd web-apps/build
               THEME=euro-office grunt --skip-imagemin
 
+          - name: Resolve build paths
+            run: |
+              cd web-apps/build
+              # Inherit from runner env if set; otherwise match grunt's default (../deploy)
+              echo "BUILD_ROOT=${BUILD_ROOT:-$(realpath ../deploy)}" >> $GITHUB_ENV
+              # Inherit from runner env if set; otherwise read from common.json
+              echo "PRODUCT_VERSION=${PRODUCT_VERSION:-$(node -e "console.log(require('./common.json').version)")}" >> $GITHUB_ENV
+
+          - name: Deploy common assets
+            run: |
+              cd web-apps/build
+              node scripts/deploy-common.js
+
+          - name: Deploy HTML templates
+            run: |
+              cd web-apps/build
+              node scripts/deploy-html.js
+
+          - name: Deploy editor resources
+            run: |
+              cd web-apps/build
+              node scripts/deploy-resources.js
+
+          - name: Deploy reporter view
+            run: |
+              cd web-apps/build
+              node scripts/deploy-reporter.js
+
           - name: Inline SVG sprites
             run: |
               cd web-apps/build
