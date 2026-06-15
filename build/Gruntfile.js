@@ -998,7 +998,7 @@ module.exports = function(grunt) {
     grunt.registerTask('deploy-common-embed',           ['common-embed-init', 'clean', 'copy']);
 
     grunt.registerTask('deploy-app-main',               [...spritesTask, 'main-app-init', 'clean:prebuild', ...imageminTask, 'less',
-                                                            'requirejs', 'terser:build', 'terser:postload', 'concat', 'copy', 'svgmin', 'replace:indexhtml', 'inline', 'json-minify',
+                                                            'requirejs', 'terser:build', 'terser:postload', 'concat', 'copy', 'svgmin', 'replace:indexhtml', 'json-minify',
                                                             'replace:writeVersion', 'replace:prepareHelp', 'clean:postbuild']);
 
     grunt.registerTask('deploy-app-mobile',             ['mobile-app-init', 'clean:deploy', /*'cssmin',*/ /*'copy:template-backup',*/

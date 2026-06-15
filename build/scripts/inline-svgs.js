@@ -1,0 +1,131 @@
+#!/usr/bin/env node
+/**
+ * (c) Copyright Ascensio System SIA 2010-2024
+ *
+ * This program is a free software product. You can redistribute it and/or
+ * modify it under the terms of the GNU Affero General Public License (AGPL)
+ * version 3 as published by the Free Software Foundation. In accordance with
+ * Section 7(a) of the GNU AGPL its Section 15 shall be amended to the effect
+ * that Ascensio System SIA expressly excludes the warranty of non-infringement
+ * of any third-party rights.
+ *
+ * This program is distributed WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. For
+ * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
+ */
+
+'use strict';
+
+// Replaces grunt-inline tags in built HTML files. Handles two patterns:
+//   <inline src="path/to/file.svg" />     → inlines raw SVG content
+//   <script src="path/to/file.js?__inline=true"></script> → inlines JS content
+//
+// Run after grunt (which copies .html.deploy → .html in BUILD_ROOT):
+//   node scripts/inline-svgs.js
+//
+// BUILD_ROOT env var must match what grunt and webpack use.
+
+const fs   = require('fs');
+const path = require('path');
+
+const BUILD_ROOT = process.env.BUILD_ROOT
+    ? path.resolve(process.env.BUILD_ROOT)
+    : path.resolve(__dirname, '../../deploy');
+
+const APPS_OUT = path.join(BUILD_ROOT, 'web-apps', 'apps');
+
+const EDITORS = [
+    'documenteditor',
+    'spreadsheeteditor',
+    'presentationeditor',
+    'pdfeditor',
+    'visioeditor',
+];
+
+// Mirror grunt-inline's exact regexes.
+const INLINE_RE = /<inline.+?src=["']([^"']+?)["']\s*?\/>/g;
+const SCRIPT_RE = /<script.+?src=["']([^"']+?)["'].*?>\s*<\/script>/g;
+
+let totalSubstitutions = 0;
+
+function resolveSrc(dir, src) {
+    const clean = src.split('?')[0];
+    return path.isAbsolute(clean) ? clean : path.resolve(dir, clean);
+}
+
+function processFile(htmlPath) {
+    const html = fs.readFileSync(htmlPath, 'utf8');
+    const dir  = path.dirname(htmlPath);
+    let count  = 0;
+
+    // Pass 1: <inline src="...svg" />
+    let result = html.replace(INLINE_RE, (match, src) => {
+        if (/^https?:\/\//.test(src)) return match;
+        const filePath = resolveSrc(dir, src);
+        if (!fs.existsSync(filePath)) {
+            console.error(`inline: MISSING SVG  ${filePath}`);
+            console.error(`         from        ${htmlPath}`);
+            process.exitCode = 1;
+            return match;
+        }
+        count++;
+        return fs.readFileSync(filePath, 'utf8');
+    });
+
+    // Pass 2: <script src="...?__inline=true"></script>
+    result = result.replace(SCRIPT_RE, (match, src) => {
+        if (!src.includes('__inline')) return match;
+        if (/^https?:\/\//.test(src)) return match;
+        const filePath = resolveSrc(dir, src);
+        if (!fs.existsSync(filePath)) {
+            // device_scale.js has a malformed relative path (6 levels up) that
+            // has never resolved correctly from BUILD_ROOT — warn and leave tag.
+            console.warn(`inline: missing script ${filePath} — leaving tag`);
+            return match;
+        }
+        count++;
+        return `<script>${fs.readFileSync(filePath, 'utf8')}</script>`;
+    });
+
+    totalSubstitutions += count;
+    if (count > 0) {
+        fs.writeFileSync(htmlPath, result, 'utf8');
+        console.log(`inline: processed ${path.relative(APPS_OUT, htmlPath)} (${count} tag${count !== 1 ? 's' : ''})`);
+    }
+}
+
+for (const editor of EDITORS) {
+    const editorDir = path.join(APPS_OUT, editor, 'main');
+
+    if (!fs.existsSync(editorDir)) {
+        console.error(`inline: missing dir ${editorDir} — grunt copy may not have run`);
+        process.exitCode = 1;
+        continue;
+    }
+
+    const htmlFiles = fs.readdirSync(editorDir)
+        .filter(f => f.endsWith('.html'))
+        .map(f => path.join(editorDir, f));
+
+    if (htmlFiles.length === 0) {
+        console.error(`inline: no .html files in ${editorDir} — grunt copy may have failed`);
+        process.exitCode = 1;
+        continue;
+    }
+
+    for (const file of htmlFiles) {
+        processFile(file);
+    }
+}
+
+if (totalSubstitutions === 0 && process.exitCode !== 1) {
+    console.error('inline: zero substitutions — tags missing or build shape changed');
+    process.exitCode = 1;
+}
+
+if (process.exitCode === 1) {
+    console.error('inline: FAILED');
+    process.exit(1);
+} else {
+    console.log(`inline: done — ${totalSubstitutions} substitution${totalSubstitutions !== 1 ? 's' : ''} total`);
+}

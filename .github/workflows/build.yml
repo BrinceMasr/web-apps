@@ -52,11 +52,17 @@ jobs:
               cd web-apps/build
               THEME=euro-office grunt --skip-imagemin
 
-          - name: Run webpack (documenteditor, spreadsheeteditor, presentationeditor, visioeditor)
+          - name: Inline SVG sprites
             run: |
               cd web-apps/build
-              THEME=euro-office npx webpack --config webpack.documenteditor.js &
-              THEME=euro-office npx webpack --config webpack.spreadsheeteditor.js &
-              THEME=euro-office npx webpack --config webpack.presentationeditor.js &
-              THEME=euro-office npx webpack --config webpack.visioeditor.js &
+              node scripts/inline-svgs.js
+
+          - name: Run webpack (documenteditor, spreadsheeteditor, presentationeditor, visioeditor, pdfeditor)
+            run: |
+              cd web-apps/build
+              THEME=euro-office npx webpack --config webpack.documenteditor.mjs &
+              THEME=euro-office npx webpack --config webpack.spreadsheeteditor.mjs &
+              THEME=euro-office npx webpack --config webpack.presentationeditor.mjs &
+              THEME=euro-office npx webpack --config webpack.visioeditor.mjs &
+              THEME=euro-office npx webpack --config webpack.pdfeditor.mjs &
               wait

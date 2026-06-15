@@ -16,11 +16,11 @@ Use this file to orient quickly at the start of a session without re-reading git
 | `build/webpack.presentationeditor.js` | committed `c154957f` | build-validated; deployed to eo container |
 
 ### Build scripts (Step 1 + Step 5)
-**These are migration tools. They are NOT permanent project infrastructure and must be removed from the repo when migration is complete.**
 
 | File | Status | Notes |
 |------|--------|-------|
-| `build/scripts/baseline.js` | committed `6633d584`, extended `d22a89a3` | **MIGRATION TOOL — remove at completion.** Build-output snapshot/diff. `--scan-tokens` mode added (`d22a89a3`): scans .js/.css output for unreplaced `{{TOKEN}}` strings. Run locally during migration, not in CI. |
+| `build/scripts/inline-svgs.js` | **permanent project infrastructure** | Replaces grunt-inline's `<inline src="..."/>` SVG injection. Globs `*.html` in each editor's main BUILD_ROOT dir. Mirrors grunt-inline's regex exactly. Run after grunt, before webpack in CI. Hard-fails on missing SVGs or zero substitutions. |
+| `build/scripts/baseline.js` | committed `6633d584`, extended `d22a89a3` | **MIGRATION TOOL — remove at completion.** Build-output snapshot/diff. `--scan-tokens` mode scans .js/.css output for unreplaced `{{TOKEN}}` strings. Run locally during migration, not in CI. |
 | `build/scripts/baseline.json` | committed `24f9a049` | **MIGRATION TOOL — remove at completion.** Baseline snapshot from grunt build in eo container (post IE-removal). Used with `baseline.js --diff` locally. |
 | `build/scripts/perf-report.js` | committed `4d2c76da17` | **MIGRATION TOOL — remove at completion.** Runs all four webpack configs, captures build time, asset sizes (raw + gzip), module counts. Outputs markdown. Usage: `node scripts/perf-report.js [--out file]` |
 | `build/scripts/smoke-test.md` | **untracked** (removed from git `9c1a1eb8`) | Manual smoke-test checklist — kept locally only, already not in repo |
@@ -113,7 +113,7 @@ Both grunt and webpack steps pass on the self-hosted runner. Confirmed clean:
 
 ## Known gaps (as of 2026-06-14)
 
-- **grunt-inline SVG sprite injection** — still done by grunt; webpack output has data-uri "file not found" warnings because sprites aren't present at webpack build time. Needed before grunt can be fully retired for the three active editors.
+- **grunt-inline SVG sprite injection** — replaced by `build/scripts/inline-svgs.js`. CI step added after grunt, before webpack. Makefile (DocumentServer repo) still needs `node build/scripts/inline-svgs.js` added after grunt step.
 - **pdfeditor webpack config** — `build/webpack.pdfeditor.mjs` added and runtime-validated (`app:ready` fires, code.js loads, document renders). PRODUCT_VERSION mismatch was the root cause of skeleton UI; see `findings/webpack5-pdfeditor-runtime-debug.md`. appforms config still deferred.
 - **`mangle: false` revisit** — intentional safety choice now; inflates bundle size vs grunt baseline. Revisit after performance baseline is established.
 - **Config triplication** — three webpack configs near-identical. Consider `webpack.editor.factory.mjs(editorName, sdkPath)`.
