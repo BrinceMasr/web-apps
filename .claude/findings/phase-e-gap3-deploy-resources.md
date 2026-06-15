@@ -9,9 +9,8 @@ Discovered by advisor review (2026-06-15). Updated with second advisor review co
 ### deploy-app-main (per editor: doc, spreadsheet, presentation, visio, pdf)
 
 **Raster images** (`imagemin.images-app` — `images-common` is DEAD CONFIG, commented out in Gruntfile:622-626):
-- `apps/<editor>/main/resources/img/**/*.{png,jpg,gif,ico}` excl `toolbar/**/*x/**/*` → BUILD_ROOT img
-- In CI: **plain copy** (not optimized) because CI runs `grunt --skip-imagemin`
-- SVGmin is NEVER gated by `--skip-imagemin` — svgo always runs in both CI and local
+- `apps/<editor>/main/resources/img/**/*.{png,jpg,gif,ico}` excl `toolbar/**/*x/**/*` → BUILD_ROOT img (sharp-optimized)
+- Grunt used `--skip-imagemin` in CI as an ARM workaround for `grunt-contrib-imagemin`. sharp runs natively on ARM — **always optimize, no skip flag needed**.
 
 **SVGs** (`svgmin` → `svgicons.common`):
 - `apps/<editor>/main/resources/img/**/*.svg` excl `toolbar/**/*x/**/*` → BUILD_ROOT img (svgo-optimized)
@@ -64,19 +63,14 @@ Rationale: `globToRegex` has load-bearing limitations (no `?` or char classes) a
 ```javascript
 async function optimizeImages(srcDir, destDir, {
     exclude = [],
-    rastersOnly = false,  // skip SVGs (for --skip-imagemin mode)
-    svgOnly = false,      // skip rasters (not currently used)
+    rastersOnly = false,
+    svgOnly = false,
 } = {})
 ```
 
-`--skip-imagemin` must gate **rasters only** — SVGs always go through svgo to match grunt (svgmin is never skipped by grunt's `--skip-imagemin` flag).
+deploy-resources.js needs to call it once for rasters (per-editor img) and once for SVGs (per-editor img) as separate passes since the source dirs differ. The `rastersOnly`/`svgOnly` flags support this split cleanly.
 
-### `--skip-imagemin` behavior in deploy-resources.js
-
-- With `--skip-imagemin`: plain `copyDirFiltered` for rasters; svgo still runs for SVGs
-- Without: `sharp` optimize rasters + svgo SVGs
-- CI must pass `--skip-imagemin` (matching current grunt CI behavior: `grunt --skip-imagemin`)
-- Local/release builds may omit it
+**No `--skip-imagemin` flag in deploy-resources.js.** Grunt's `--skip-imagemin` was an ARM workaround for `grunt-contrib-imagemin`; sharp and svgo run natively on ARM. Always optimize — CI and local both use the same path.
 
 ### inline-svgs.js: remove `.reporter.html` exclusion
 
@@ -124,11 +118,11 @@ Before writing the scripts, extract `build/scripts/lib/build-utils.js` from `dep
 - Makefile: replace `grunt --skip-imagemin` with:
   ```
   PRODUCT_VERSION=$(PRODUCT_VERSION) BUILD_ROOT=$(EO_ROOT) node scripts/deploy-common.js && \
-  BUILD_ROOT=$(EO_ROOT) node scripts/deploy-resources.js --skip-imagemin && \
+  BUILD_ROOT=$(EO_ROOT) node scripts/deploy-resources.js && \
   BUILD_ROOT=$(EO_ROOT) node scripts/deploy-reporter.js && \
   BUILD_ROOT=$(EO_ROOT) node scripts/deploy-html.js && \
   ```
-  (existing `inline-svgs.js` line follows; `--skip-imagemin` matches previous grunt `--skip-imagemin`)
+  (existing `inline-svgs.js` line follows; no `--skip-imagemin` — sharp/svgo run on ARM natively)
 
 ### Dual-run ordering invariant (step 4)
 
