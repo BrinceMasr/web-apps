@@ -19,15 +19,41 @@ if (fs.existsSync(configPath)) {
   meta = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 }
 
-// Copy theme mobile overrides to a neutral stub path that all editor app.less files import.
+// Copy theme LESS to neutral stub paths that the upstream LESS files import.
 // Runs once at module load (before webpack starts). Generates an empty stub when the theme
-// has no mobile-overrides.less so the import in app.less always resolves.
-const overrideSrc = path.join(rootDir, 'theme', theme, 'assets', 'less', 'overrides', 'mobile-overrides.less');
-const overrideDst = path.join(rootDir, 'apps', 'common', 'mobile', 'resources', 'less', '_theme-mobile-overrides.less');
-try {
-  if (fs.existsSync(overrideSrc)) fs.copyFileSync(overrideSrc, overrideDst);
-  else fs.writeFileSync(overrideDst, '// no theme mobile overrides\n');
-} catch (e) { console.warn('[theme.config] mobile overrides copy failed:', e.message); }
+// has no file so the @import in the upstream file always resolves.
+function copyOverride(src, dst) {
+  try {
+    if (fs.existsSync(src)) fs.copyFileSync(src, dst);
+    else fs.writeFileSync(dst, '// no theme override\n');
+  } catch (e) { console.warn(`[theme.config] override copy failed (${path.basename(dst)}):`, e.message); }
+}
+
+const themeAssetsLess = path.join(rootDir, 'theme', theme, 'assets', 'less');
+
+// Mobile overrides — imported by each mobile editor's app.less via _theme-mobile-overrides.less
+copyOverride(
+  path.join(themeAssetsLess, 'overrides', 'mobile-overrides.less'),
+  path.join(rootDir, 'apps', 'common', 'mobile', 'resources', 'less', '_theme-mobile-overrides.less'),
+);
+
+// Desktop theme entry — imported last by each desktop editor's app.less via _theme-main.less.
+// theme.less imports overrides.less which imports each override file; adding a new override
+// is purely a theme concern (add file, add @import to overrides.less — no build changes needed).
+// We generate a redirector stub (not a copy) so that theme.less's own relative @imports
+// (e.g. overrides.less) resolve from the theme directory, not from common/main/resources/less/.
+{
+  const themeLess = path.join(themeAssetsLess, 'theme.less');
+  const stubDst   = path.join(rootDir, 'apps', 'common', 'main', 'resources', 'less', '_theme-main.less');
+  try {
+    if (fs.existsSync(themeLess)) {
+      const rel = path.relative(path.dirname(stubDst), themeLess).replace(/\\/g, '/');
+      fs.writeFileSync(stubDst, `@import "${rel}";\n`);
+    } else {
+      fs.writeFileSync(stubDst, '// no theme\n');
+    }
+  } catch (e) { console.warn('[theme.config] _theme-main.less stub failed:', e.message); }
+}
 
 // Resolve a brand value with priority: env var > config.json > default.
 // Empty string in config.json is respected (explicit "hide this"), matching

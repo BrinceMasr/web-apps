@@ -39,7 +39,7 @@ AGPL fork of OnlyOffice DocumentServer for Nextcloud. Build system migrated from
 
 | Issue | Notes |
 |-------|-------|
-| `dark-logo_s.svg` / `warnings_s.svg` 404 | CSS relative path resolves to e.g. `presentationeditor/main/common/main/…` — 2-level-up path assumed a different CSS output directory. Pre-existing or webpack output path difference. Same pattern in all editors. |
+| `dark-logo_s.svg` / `warnings_s.svg` / `doc-formats/large/*.svg` 404 | CSS relative path resolves to e.g. `presentationeditor/main/common/main/…` — 2-level-up path assumed a different CSS output directory. Pre-existing or webpack output path difference. Affects all editors; manifests in header logo, warning icon, and "Download As" dialog format icons. |
 | `themes_thumbnail@2x.png` 404 | `sdkjs/common/Images/…` — outside web-apps scope, sdkjs issue. |
 | Transitions.js icon panel blank | All `btn-transition-*` icons invisible — CSS-class template not updated for SVG migration. See `.claude/icon-migration.md`. |
 | `FormsTab.getView()` throws when opening PDF | `FormsTab.setConfig` (which sets `this.view`) is only called when `config.isFormCreator`. `Toolbar.onDocumentReady` calls `FormsTab.getView()` whenever `isPDFForm`. When user opens a plain PDF (not form-creator), `this.view` is undefined, `getView()` throws instead of returning `undefined`. SDK global error handler catches it. Pre-existing upstream bug — not caused by webpack migration. Fix: guard `_viewsCache` in base `getView`, or move FormsTab view creation to `onLaunch`. |

@@ -42,6 +42,7 @@ selenium-debug.log
 
 # generated at build time by theme.config.mjs
 apps/common/mobile/resources/less/_theme-mobile-overrides.less
+apps/common/main/resources/less/_theme-main.less
 
 # Claude session notes — local only, not for the repo
 .claude/onboarding.md
