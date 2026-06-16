@@ -13,11 +13,11 @@
 //   mode.symbol.inline:true  → <svg width="0" height="0" style="position:absolute">
 //   mode.symbol.inline:false → plain <svg xmlns="…"> for docformats
 
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+'use strict';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const path    = require('path');
+const fs      = require('fs');
+
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const APPS      = path.join(REPO_ROOT, 'apps');
 
