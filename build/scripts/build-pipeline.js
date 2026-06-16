@@ -189,7 +189,6 @@ async function main() {
         task('deploy-common',     node,   ['scripts/deploy-common.js']),
         task('deploy-html',       node,   ['scripts/deploy-html.js']),
         task('deploy-reporter',   node,   ['scripts/deploy-reporter.js']),
-        task('deploy-theme-img',  node,   ['scripts/deploy-theme-images.js']),
         task('deploy-embed',      node,   ['scripts/deploy-embed.js']),
     ];
 
@@ -221,16 +220,17 @@ async function main() {
     // ---- phase 2: deps resolved after phase 1 -------------------------------
     // deploy-resources depends on sprites (phase 1)
     // inline-svgs depends on deploy-common + deploy-html (phase 1)
-    // Both are safe to run in parallel with each other.
+    // deploy-theme-img overwrites images also written by deploy-common + mobile — must run after both.
 
-    await phase('Phase 2 — parallel', [
+    const p2 = await phase('Phase 2 — parallel', [
         task('deploy-resources', node, ['scripts/deploy-resources.js']),
+        task('deploy-theme-img', node, ['scripts/deploy-theme-images.js']),
         task('inline-svgs',      node, ['scripts/inline-svgs.js']),
     ]);
 
     // ---- summary -------------------------------------------------------------
 
-    const all = [...p1];
+    const all = [...p1, ...p2];
     const wallMs = Date.now() - wallStart;
 
     const longestLabel = Math.max(...all.map(r => r.label.length));
