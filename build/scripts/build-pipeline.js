@@ -124,6 +124,13 @@ function task(label, cmd, args = [], opts = {}) {
             stderrBuf.push(chunk.toString());
         });
 
+        child.on('error', err => {
+            const ms = Date.now() - start;
+            process.stdout.write(`  ${RED('✗')} ${paddedLabel} ${RED('FAILED')} ${DIM(elapsed(ms))}\n`);
+            process.stderr.write(`  spawn error: ${err.message}\n`);
+            resolve({ label, ms, code: 1 });
+        });
+
         child.on('exit', code => {
             const ms = Date.now() - start;
             if (code === 0) {
