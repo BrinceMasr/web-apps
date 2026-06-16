@@ -54,6 +54,44 @@ The ordering invariant: `deploy-html` must complete before `inline-svgs` runs. N
 
 ---
 
+## Theme overrides
+
+Theme-specific LESS lives entirely in `theme/euro-office/assets/less/`. The build compiles it into each editor's CSS bundle automatically — no build changes are needed when adding new overrides.
+
+### How it works
+
+```
+theme/euro-office/assets/less/
+  theme.less          ← entry: brand variables + @import "overrides.less"
+  overrides.less      ← @import each override file
+  overrides/
+    header.less       ← per-editor header logo rules (data-editor-type selectors)
+    about.less        ← about dialog logo
+```
+
+At build time, `theme.config.mjs` writes a one-line redirector stub:
+
+```
+apps/common/main/resources/less/_theme-main.less
+  → @import "../../../../../theme/euro-office/assets/less/theme.less";
+```
+
+Each editor's `app.less` ends with `@import "../../../../common/main/resources/less/_theme-main.less";`. This pulls theme variables and overrides into the same LESS compilation scope, so theme variables get last-write-wins precedence over upstream defaults.
+
+The stub is a redirector (not a copy) so that `theme.less`'s own relative `@import "overrides.less"` resolves from the theme directory. `_theme-main.less` is gitignored — it is generated on every build.
+
+### Adding a new theme override
+
+1. Create `theme/euro-office/assets/less/overrides/<name>.less`
+2. Add `@import "overrides/<name>";` to `theme/euro-office/assets/less/overrides.less`
+3. Done — no changes to `build/` or `apps/` required
+
+### CSS output path
+
+webpack outputs CSS to `apps/<editor>/main/app.css` (root of the editor `main/` directory), matching grunt's baseline. `url()` references in LESS are relative to this file, so `../../common/main/resources/img/…` resolves correctly. The MiniCssExtractPlugin filename is `[name].css` (not `resources/css/[name].css`).
+
+---
+
 ## Gotchas
 
 These took significant debugging to find. Read before touching the build.
@@ -100,7 +138,7 @@ All six webpack configs share a single `BUILD_ROOT`. Setting `clean: true` would
 
 | Issue | Notes |
 |-------|-------|
-| `dark-logo_s.svg` / `warnings_s.svg` 404 | CSS path resolves to wrong depth — pre-existing in all editors |
+| `warnings_s.svg` 404 | CSS `url()` path — pre-existing in all editors |
 | `themes_thumbnail@2x.png` 404 | In `sdkjs/common/Images/` — outside web-apps scope |
 | Transitions panel icons blank | `btn-transition-*` CSS classes not updated for SVG sprite migration |
 | `FormsTab.getView()` throws on plain PDF | Pre-existing OnlyOffice upstream bug — SDK error handler catches it |
