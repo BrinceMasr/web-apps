@@ -66,7 +66,7 @@ export function editorConfig(editorName, opts = {}) {
         ? path.join(APPS_ROOT, opts.lessEntry)
         : path.join(APPS_ROOT, `${editorName}/${subpath}/resources/less/app.less`);
 
-    // LESS compiled alongside JS; MiniCssExtractPlugin pulls it to resources/css/app.css
+    // LESS compiled alongside JS; MiniCssExtractPlugin pulls it to app.css (root of OUT_DIR)
     const productVersion = process.env.PRODUCT_VERSION
         ? `${process.env.PRODUCT_VERSION}${process.env.BUILD_NUMBER ? `.${process.env.BUILD_NUMBER}` : ''}`
         : '0.0.0';
@@ -219,7 +219,7 @@ export function editorConfig(editorName, opts = {}) {
             }),
 
             new MiniCssExtractPlugin({
-                filename: 'resources/css/[name].css',
+                filename: '[name].css',
             }),
 
             new CopyWebpackPlugin({

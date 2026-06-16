@@ -347,6 +347,6 @@
         require(['app']);
     </script>
 
-    <link rel="stylesheet" href="../../../apps/visioeditor/main/resources/css/app.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="../../../apps/visioeditor/main/app.css" media="print" onload="this.media='all'">
 </body>
 </html>
