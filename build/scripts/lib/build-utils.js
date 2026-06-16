@@ -123,7 +123,7 @@ function replaceTokensIn(dir, replacements, { exts = ['.js'] } = {}) {
         let content = fs.readFileSync(abs, 'utf8');
         let changed  = false;
         for (const [from, to] of replacements) {
-            const next = content.replace(from, to);
+            const next = content.replace(from, () => to);
             if (next !== content) { content = next; changed = true; }
         }
         if (changed) fs.writeFileSync(abs, content, 'utf8');
