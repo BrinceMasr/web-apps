@@ -33,15 +33,15 @@ jobs:
             with:
                 node-version: ${{ env.NODE_VERSION }}
 
-          - name: Build sprites
-            run: |
-              cd web-apps/build
-              ./sprites.sh
-
           - name: Install dependencies
             run: |
               cd web-apps/build
               npm install
+
+          - name: Build sprites
+            run: |
+              cd web-apps/build
+              node scripts/deploy-sprites.js
         
           - name: Merge missing translations keys
             run: |

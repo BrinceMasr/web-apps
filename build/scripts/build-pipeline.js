@@ -192,7 +192,7 @@ async function main() {
     // ---- phase 1: all independent work in parallel --------------------------
 
     const phase1Tasks = [
-        task('sprites',           'bash', ['./sprites.sh']),
+        task('sprites',           node,   ['scripts/deploy-sprites.js']),
         task('deploy-common',     node,   ['scripts/deploy-common.js']),
         task('deploy-html',       node,   ['scripts/deploy-html.js']),
         task('deploy-reporter',   node,   ['scripts/deploy-reporter.js']),
