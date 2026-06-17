@@ -145,10 +145,62 @@ All six webpack configs share a single `BUILD_ROOT`. Setting `clean: true` would
 
 ---
 
+## Build system improvements — 2026-06-17
+
+Three follow-up changes on top of the Phase E work. All committed to `build/webpack-migration` and validated with two full pipeline runs in the `eo` container.
+
+### EsbuildPlugin replaces TerserPlugin + CssMinimizerPlugin (closes #107)
+
+**Why:** Mobile webpack builds were bottlenecked on Terser JS minification + cssnano CSS minification running as two separate passes in `optimization.minimizer`. esbuild processes both in a single native pass — roughly 10× faster than Terser at minification.
+
+**What:** `vendor/framework7-react/build/webpack.config.js` — the two-entry minimizer array and the duplicate `CssMinimizerPlugin` in the production plugins block are replaced with:
+
+```js
+minimizer: [new EsbuildPlugin({ target: 'es2015', css: true })]
+```
+
+`terser-webpack-plugin` and `css-minimizer-webpack-plugin` removed from `package.json`; `esbuild-loader ^4.0.0` added.
+
+**npm install runs inside the `eo` container** (`/develop/web-apps/vendor/framework7-react`), not on the host — the directory is mounted from the Docker volume.
+
+**Measured results (two full pipeline runs, eo container):**
+
+| Task | Before | Run 1 | Run 2 |
+|------|--------|-------|-------|
+| mobile:word | 146–179s | 130.4s | 132.9s |
+| mobile:cell | 146–179s | 127.2s | 130.8s |
+| mobile:slide | 146–179s | 122.5s | 126.1s |
+| mobile:visio | 146–179s | 101.4s | 116.2s |
+| Wall clock | — | 176.9s | 164.0s |
+
+Run-to-run variance of ~10s is normal (Docker CPU scheduling, page cache). Both runs fully green.
+
+**CSS minification note:** esbuild's CSS minifier is structurally simpler than cssnano — it does not do advanced cross-rule merging, shorthand collapsing, or `z-index` rebasing. In practice the output is correct and slightly larger. If a CSS bundle grows materially after this change, esbuild is the reason; it is acceptable.
+
+**What was not changed (deferred):** Replacing `babel-loader` with `esbuild-loader` for JS *transforms* (not just minification) would save a further ~30–50s per editor. Deferred because the mobile code uses MobX `@inject` legacy class decorators (`experimentalDecorators: true` required), and the decorator transform is the one thing worth a dedicated tested commit rather than bundling into this change. Key facts for when this is revisited:
+- Only *class-level* `@inject` decorators are used — no property/accessor decorators exist in the mobile source
+- MobX uses `makeObservable(this, {...})` runtime API in stores (MobX 6), not `@observable` field decorators
+- esbuild `experimentalDecorators: true` implements TypeScript legacy decorator semantics — same as babel `legacy: true` — and is sufficient for `@inject`
+- Switch JSX to `jsx: 'automatic'` as a separate commit from the loader swap, so any failure has a known cause
+
+### Lazy task spawn + word-wrapped phase task list
+
+**Why:** `task()` previously spawned child processes eagerly when the spec was created. `phase1Tasks` (deploy ×5 + webpack ×6) was built eagerly, then `mobile:install` was awaited (~20s), then `phase()` was called. Result: the phase banner and task list were printed *after* the fast deploy tasks had already run and printed their ✓ lines — completion before header. Confusing and misleading.
+
+**What:** `task()` now returns a lazy spec `{label, cmd, args, opts}`. `runTask(spec)` does the spawn and returns `{promise, kill, label}`. `phase()` prints its banner and task list, *then* calls `runTask()` on each spec. Output order is now always correct. Task list is also word-wrapped at 80 columns with ` · ` separators instead of one long comma-joined line.
+
+### Flush stderr of killed tasks on sibling failure
+
+**Why:** When a phase task fails, `phase()` sends SIGTERM to all sibling processes. Killed tasks' buffered stderr was discarded — if the killed task had begun emitting a useful error before being killed, that output was silently lost.
+
+**What:** One line added to `runTask()`: `stderrBuf` is flushed in the `signal` branch of `child.on('exit')`, matching the existing flush in the non-zero exit branch. Diagnostic output from a killed task is now visible.
+
+---
+
 ## Tracked follow-ups
 
 - [#106](https://github.com/Euro-Office/web-apps/issues/106) — Replace grunt-inline SVG/script embedding with cached external assets (duplicate copyright headers, no independent caching)
-- [#107](https://github.com/Euro-Office/web-apps/issues/107) — Evaluate esbuild as TerserPlugin replacement for mobile builds
+- [#107](https://github.com/Euro-Office/web-apps/issues/107) — Evaluate esbuild as TerserPlugin replacement for mobile builds ✅ resolved 2026-06-17
 
 ---
 
