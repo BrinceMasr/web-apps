@@ -75,7 +75,7 @@ export function editorConfig(editorName, opts = {}) {
         mode: env,
 
         cache: {
-            type: 'filesystem',
+            type: 'memory',
         },
 
         entry: {
