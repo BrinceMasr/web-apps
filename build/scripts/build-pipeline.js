@@ -32,9 +32,11 @@
 //   Phase 1 — all parallel:
 //     sprites.sh, deploy-common, deploy-html, deploy-reporter,
 //     deploy-theme-images, deploy-embed, webpack ×6, mobile ×4
-//   Phase 2 — parallel (start as soon as deps done):
-//     deploy-resources  (waits for sprites.sh)
-//     inline-svgs       (waits for deploy-common + deploy-html)
+//   Phase 2 — parallel (start as soon as Phase 1 done):
+//     deploy-resources  (deploys per-editor toolbar/icons.svg)
+//     deploy-theme-img  (overwrites common/mobile images)
+//   Phase 3 — sequential (must follow Phase 2):
+//     inline-svgs       (inlines icons.svg from deploy-resources + HTML from Phase 1)
 
 const { spawn }  = require('child_process');
 const path       = require('path');
@@ -225,19 +227,24 @@ async function main() {
     const p1 = await phase('Phase 1 — parallel', phase1Tasks);
 
     // ---- phase 2: deps resolved after phase 1 -------------------------------
-    // deploy-resources depends on sprites (phase 1)
-    // inline-svgs depends on deploy-common + deploy-html (phase 1)
-    // deploy-theme-img overwrites images also written by deploy-common + mobile — must run after both.
-
+    // Phase 2: produce all assets that inline-svgs will inline.
+    // deploy-resources deploys per-editor toolbar/icons.svg (the sprite inlined into HTML).
+    // deploy-theme-img overwrites common/mobile images — disjoint from deploy-resources, safe to run together.
     const p2 = await phase('Phase 2 — parallel', [
         task('deploy-resources', node, ['scripts/deploy-resources.js']),
         task('deploy-theme-img', node, ['scripts/deploy-theme-images.js']),
-        task('inline-svgs',      node, ['scripts/inline-svgs.js']),
+    ]);
+
+    // Phase 3: inline-svgs MUST run after Phase 2 — it inlines per-editor toolbar/icons.svg
+    // (written by deploy-resources) as well as common sprites and HTML from Phase 1.
+    // Running it concurrently with deploy-resources races the per-editor icons.svg.
+    const p3 = await phase('Phase 3 — inline', [
+        task('inline-svgs', node, ['scripts/inline-svgs.js']),
     ]);
 
     // ---- summary -------------------------------------------------------------
 
-    const all = [...p1, ...p2];
+    const all = [...p1, ...p2, ...p3];
     const wallMs = Date.now() - wallStart;
 
     const longestLabel = Math.max(...all.map(r => r.label.length));
