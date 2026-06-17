@@ -138,6 +138,7 @@ function runTask({ label, cmd, args, opts = {} }) {
             const ms = Date.now() - start;
             if (signal) {
                 process.stdout.write(`  ${DIM('○')} ${paddedLabel} ${DIM('killed ' + elapsed(ms))}\n`);
+                if (stderrBuf.length) process.stderr.write(stderrBuf.join(''));
                 resolve({ label, ms, code: -1 });
             } else if (code === 0) {
                 process.stdout.write(`  ${GREEN('✓')} ${paddedLabel} ${DIM(elapsed(ms))}\n`);
