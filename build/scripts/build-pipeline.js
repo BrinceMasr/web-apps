@@ -99,18 +99,21 @@ function elapsed(ms) {
 
 // ---- task runner ------------------------------------------------------------
 
-// Runs a command, prefixing each output line with [label].
-// Buffers stderr; flushes on failure only.
-// Returns Promise<{label, ms, code}>.
+// Returns a lazy task spec — nothing is spawned until phase() or runTask() is called.
 function task(label, cmd, args = [], opts = {}) {
-    return new Promise(resolve => {
+    return { label, cmd, args, opts };
+}
+
+// Spawns a task spec. Returns { promise, kill, label }.
+// promise resolves to { label, ms, code } where code=-1 means killed by phase abort.
+function runTask({ label, cmd, args, opts = {} }) {
+    let child = null;
+    const promise = new Promise(resolve => {
         const start = Date.now();
         const paddedLabel = label.padEnd(PAD);
         const stderrBuf = [];
 
-        process.stdout.write(`  ${DIM(paddedLabel)} starting…\r`);
-
-        const child = spawn(cmd, args, {
+        child = spawn(cmd, args, {
             env: { ...CHILD_ENV, ...(opts.env || {}) },
             cwd: opts.cwd || BUILD_DIR,
             stdio: ['ignore', 'pipe', 'pipe'],
@@ -122,9 +125,7 @@ function task(label, cmd, args = [], opts = {}) {
             }
         });
 
-        child.stderr.on('data', chunk => {
-            stderrBuf.push(chunk.toString());
-        });
+        child.stderr.on('data', chunk => { stderrBuf.push(chunk.toString()); });
 
         child.on('error', err => {
             const ms = Date.now() - start;
@@ -133,27 +134,65 @@ function task(label, cmd, args = [], opts = {}) {
             resolve({ label, ms, code: 1 });
         });
 
-        child.on('exit', code => {
+        child.on('exit', (code, signal) => {
             const ms = Date.now() - start;
-            if (code === 0) {
+            if (signal) {
+                process.stdout.write(`  ${DIM('○')} ${paddedLabel} ${DIM('killed ' + elapsed(ms))}\n`);
+                resolve({ label, ms, code: -1 });
+            } else if (code === 0) {
                 process.stdout.write(`  ${GREEN('✓')} ${paddedLabel} ${DIM(elapsed(ms))}\n`);
+                resolve({ label, ms, code: 0 });
             } else {
                 process.stdout.write(`  ${RED('✗')} ${paddedLabel} ${RED('FAILED')} ${DIM(elapsed(ms))}\n`);
-                if (stderrBuf.length) {
-                    process.stderr.write(stderrBuf.join(''));
-                }
+                if (stderrBuf.length) process.stderr.write(stderrBuf.join(''));
+                resolve({ label, ms, code });
             }
-            resolve({ label, ms, code });
         });
     });
+    return { promise, kill: () => child && child.kill('SIGTERM'), label };
 }
 
-// Run a set of tasks in parallel; returns results array.
-// Halts process on first failure.
-async function phase(title, tasks) {
-    banner(title);
-    const results = await Promise.all(tasks);
-    const failed = results.filter(r => r.code !== 0);
+// Word-wrap a list of labels into indented lines separated by ' · '.
+function formatTaskList(labels, maxWidth = 80) {
+    const SEP = ' · ';
+    const INDENT = '  ';
+    const lines = [];
+    let line = INDENT;
+    for (const label of labels) {
+        const chunk = line === INDENT ? label : SEP + label;
+        if (line !== INDENT && line.length + chunk.length > maxWidth) {
+            lines.push(line);
+            line = INDENT + label;
+        } else {
+            line += chunk;
+        }
+    }
+    if (line !== INDENT) lines.push(line);
+    return lines.join('\n');
+}
+
+// Run a set of task specs in parallel; kills siblings on first failure.
+// Prints the banner and task list BEFORE spawning, so output order is always correct.
+// Returns results array (code=-1 entries are killed tasks, not counted as failures).
+async function phase(title, taskSpecs) {
+    const count = taskSpecs.length;
+    banner(`${title} — ${count} task${count !== 1 ? 's' : ''}`);
+    process.stdout.write(DIM(formatTaskList(taskSpecs.map(t => t.label))) + '\n\n');
+
+    const running = taskSpecs.map(runTask);
+    let aborted = false;
+    const results = await Promise.all(
+        running.map(t =>
+            t.promise.then(r => {
+                if (r.code > 0 && !aborted) {
+                    aborted = true;
+                    running.forEach(o => o.kill());
+                }
+                return r;
+            })
+        )
+    );
+    const failed = results.filter(r => r.code > 0);
     if (failed.length) {
         process.stderr.write(RED(`\n✗ ${failed.map(r => r.label).join(', ')} failed — aborting\n`));
         process.exit(1);
@@ -191,6 +230,12 @@ async function main() {
         '',
     ].join('\n'));
 
+    // ---- preflight: source-side replacement audit (Check A) -----------------
+    // Runs before Phase 1 — no point building if load-bearing idioms have drifted.
+    const p0 = await phase('Preflight', [
+        task('verify-replacements', node, ['scripts/verify-replacements.mjs']),
+    ]);
+
     // ---- phase 1: all independent work in parallel --------------------------
 
     const phase1Tasks = [
@@ -209,10 +254,10 @@ async function main() {
     // Mobile: npm install first (sequential), then 4 editors in parallel.
     // Run as a pre-phase so all 4 editor tasks appear individually in the summary.
     if (!SKIP_MOBILE) {
-        const install = await task('mobile:install', 'npm',
+        const install = await runTask(task('mobile:install', 'npm',
             ['install', '--include=dev', '--production=false'],
             { cwd: FRAMEWORK7_DIR }
-        );
+        )).promise;
         if (install.code !== 0) {
             process.stderr.write(RED(`\n✗ mobile:install failed — aborting\n`));
             process.exit(1);
@@ -242,14 +287,23 @@ async function main() {
         task('inline-svgs', node, ['scripts/inline-svgs.js']),
     ]);
 
+    // ---- phase 4: output-side gates (Check B + Check C) ---------------------
+    // verify-bundles: scans built bundles for surviving {{TOKEN}} literals.
+    // verify-deploy:  asserts every required vendor/embed/main artifact exists.
+    // Both are independent reads of BUILD_ROOT — safe to run in parallel.
+    const p4 = await phase('Phase 4 — gates', [
+        task('verify-bundles', node, ['scripts/verify-bundles.mjs']),
+        task('verify-deploy',  node, ['scripts/verify-deploy.mjs']),
+    ]);
+
     // ---- summary -------------------------------------------------------------
 
-    const all = [...p1, ...p2, ...p3];
+    const all = [...p0, ...p1, ...p2, ...p3, ...p4];
     const wallMs = Date.now() - wallStart;
 
     const longestLabel = Math.max(...all.map(r => r.label.length));
     const lines = all.map(r => {
-        const mark = r.code === 0 ? GREEN('✓') : RED('✗');
+        const mark = r.code === 0 ? GREEN('✓') : r.code < 0 ? DIM('○') : RED('✗');
         return `  ${mark} ${r.label.padEnd(longestLabel + 2)} ${DIM(elapsed(r.ms))}`;
     });
 
