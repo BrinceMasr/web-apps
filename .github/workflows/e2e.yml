@@ -88,11 +88,11 @@ jobs:
           BUILD_ROOT: ${{ github.workspace }}/web-apps/deploy
           THEME: euro-office
           PRODUCT_VERSION: ${{ steps.ver.outputs.product_version }}
+          SKIP_MOBILE: '1'
         run: |
-          npm install -g grunt-cli
           npm install
           ( cd ../translation && python3 merge_and_check.py )
-          grunt
+          node scripts/build-pipeline.js
 
       - name: Build overlay image with fresh web-apps
         run: |
