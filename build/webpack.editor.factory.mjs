@@ -36,6 +36,7 @@ import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 import TerserPlugin from 'terser-webpack-plugin';
 import CopyWebpackPlugin from 'copy-webpack-plugin';
 import { assertBuildEnv, themeDefines, themeFormVars, themeGlobalVars, themeReplacements } from './theme.config.mjs';
+import { LOAD_BEARING } from './replacements.manifest.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -154,13 +155,10 @@ export function editorConfig(editorName, opts = {}) {
                     test: /common[/\\]locale\.js$/,
                     loader: 'string-replace-loader',
                     options: {
-                        multiple: [
-                            {
-                                search: 'if \\( !window\\.fetch \\) \\{[\\s\\S]*?\\} else _requireLang\\(\\);',
-                                replace: '    _requireLang();',
-                                flags: 'g',
-                            },
-                        ],
+                        multiple: (() => {
+                            const e = LOAD_BEARING.find(x => x.id === 'locale-fetch');
+                            return [{ search: e.search, replace: '    _requireLang();', flags: e.flags }];
+                        })(),
                     },
                 },
                 {

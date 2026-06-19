@@ -52,8 +52,12 @@ function ensureDir(dir) {
 }
 
 // Copy a single file, creating parent dirs as needed. No-ops if src is absent.
-function copyFile(src, dest) {
-    if (!fs.existsSync(src)) return;
+// With { required: true }, throws instead of silently no-oping on a missing src.
+function copyFile(src, dest, opts = {}) {
+    if (!fs.existsSync(src)) {
+        if (opts.required) throw new Error(`copyFile: required source not found: ${src}`);
+        return;
+    }
     ensureDir(path.dirname(dest));
     fs.copyFileSync(src, dest);
 }

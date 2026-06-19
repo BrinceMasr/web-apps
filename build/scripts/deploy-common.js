@@ -166,35 +166,14 @@ async function deployAppsCommon() {
     console.log('deploy-common: apps-common done');
 }
 
-function deployJQuery() {
-    const vendorOut = path.join(BUILD_OUT, 'vendor', 'jquery');
-    cleanDir(vendorOut);
-    copyFile(
-        path.join(VENDOR_SRC, 'jquery', 'jquery.min.js'),
-        path.join(vendorOut, 'jquery.min.js')
-    );
-    copyFile(
-        path.join(VENDOR_SRC, 'jquery.browser', 'dist', 'jquery.browser.min.js'),
-        path.join(vendorOut, 'jquery.browser.min.js')
-    );
-    console.log('deploy-common: jquery done');
-}
-
-function deploySimpleVendor(name, srcRel, destRel) {
-    const vendorOut = path.join(BUILD_OUT, 'vendor', name);
-    cleanDir(vendorOut);
-    copyFile(path.join(VENDOR_SRC, srcRel), path.join(BUILD_OUT, destRel));
-}
-
-async function deployRequireJS() {
-    const requireOut = path.join(BUILD_OUT, 'vendor', 'requirejs');
+async function deployRequireJS(entry) {
+    const requireOut = path.dirname(path.join(BUILD_OUT, entry.dest));
     cleanDir(requireOut);
 
-    const src     = fs.readFileSync(path.join(VENDOR_SRC, 'requirejs', 'require.js'), 'utf8');
-    const result  = await minify(src, { compress: true, mangle: true, format: { comments: false } });
-    const destPath = path.join(requireOut, 'require.js');
+    const src    = fs.readFileSync(path.join(VENDOR_SRC, entry.src), 'utf8');
+    const result = await minify(src, { compress: true, mangle: true, format: { comments: false } });
     ensureDir(requireOut);
-    fs.writeFileSync(destPath, result.code, 'utf8');
+    fs.writeFileSync(path.join(BUILD_OUT, entry.dest), result.code, 'utf8');
     console.log('deploy-common: requirejs done');
 }
 
@@ -208,39 +187,37 @@ function deployCommonEmbed() {
     console.log('deploy-common: common-embed done');
 }
 
-function deployMonaco() {
-    const monacoOut = path.join(BUILD_OUT, 'vendor', 'monaco');
+function deployMonaco(entry) {
+    const monacoOut = path.join(BUILD_OUT, entry.dest);
     cleanDir(monacoOut);
-    copyDir(path.join(VENDOR_SRC, 'monaco'), monacoOut);
+    copyDir(path.join(VENDOR_SRC, entry.src), monacoOut);
     console.log('deploy-common: monaco done');
 }
 
 // ---- main -------------------------------------------------------------------
 
 (async () => {
+    const { VENDORS } = await import('../vendor.manifest.mjs');
+
     deploySDK();
     deployAPI();
     await deployAppsCommon();
 
-    // vendor: simple single-file copies (name, src-relative-to-vendor/, dest-relative-to-BUILD_OUT/)
-    const simpleVendors = [
-        ['megapixel',   'megapixel/megapix-image-min.js',          'vendor/megapixel/megapix-image-min.js'],
-        ['socketio',    'socketio/socket.io.min.js',                'vendor/socketio/socket.io.min.js'],
-        ['xregexp',     'xregexp/xregexp-all-min.js',               'vendor/xregexp/xregexp-all-min.js'],
-        ['underscore',  'underscore/underscore-min.js',             'vendor/underscore/underscore-min.js'],
-        ['iscroll',     'iscroll/iscroll.min.js',                   'vendor/iscroll/iscroll.min.js'],
-        ['fetch',       'fetch/fetch.umd.js',                       'vendor/fetch/fetch.umd.js'],
-        ['es6-promise', 'es6-promise/es6-promise.auto.min.js',      'vendor/es6-promise/es6-promise.auto.min.js'],
-    ];
-    for (const [name, src, dest] of simpleVendors) {
-        deploySimpleVendor(name, src, dest);
-        console.log(`deploy-common: ${name} done`);
+    // vendor: file copies from manifest (plain copies — no dir, no minify)
+    const cleaned = new Set();
+    for (const v of VENDORS.filter(v => !v.dir && !v.minify)) {
+        const vendorDir = path.dirname(path.join(BUILD_OUT, v.dest));
+        if (!cleaned.has(vendorDir)) {
+            cleanDir(vendorDir);
+            cleaned.add(vendorDir);
+        }
+        copyFile(path.join(VENDOR_SRC, v.src), path.join(BUILD_OUT, v.dest), { required: true });
+        console.log(`deploy-common: ${v.name} done`);
     }
 
-    deployJQuery();
-    await deployRequireJS();
+    await deployRequireJS(VENDORS.find(v => v.name === 'requirejs'));
     deployCommonEmbed();
-    deployMonaco();
+    deployMonaco(VENDORS.find(v => v.name === 'monaco'));
 
     console.log('deploy-common: all tasks done');
 })().catch(err => {
