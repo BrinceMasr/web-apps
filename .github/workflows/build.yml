@@ -38,86 +38,14 @@ jobs:
               cd web-apps/build
               npm install
 
-          - name: Build sprites
-            run: |
-              cd web-apps/build
-              node scripts/deploy-sprites.js
-        
-          - name: Merge missing translations keys
+          - name: Merge translations
             run: |
               cd web-apps/translation
               python3 merge_and_check.py
 
-          - name: Resolve build paths
-            run: |
-              cd web-apps/build
-              # Inherit from runner env if set; otherwise match grunt's default (../deploy)
-              echo "BUILD_ROOT=${BUILD_ROOT:-$(realpath ../deploy)}" >> $GITHUB_ENV
-              # Inherit from runner env if set; otherwise read from common.json
-              PV="${PRODUCT_VERSION:-$(node -e "console.log(require('./common.json').version)")}"
-              PV_MAJOR="${PV%%.*}"
-              if [ "${PV_MAJOR:-0}" -lt 6 ] 2>/dev/null; then
-                echo "FATAL: PRODUCT_VERSION=${PV} (major ${PV_MAJOR} < 6) — set PRODUCT_VERSION in runner environment" >&2
-                exit 1
-              fi
-              echo "PRODUCT_VERSION=${PV}" >> $GITHUB_ENV
-              # Build number: inherit from runner (e.g. GITHUB_RUN_NUMBER) or fall back to common.json
-              echo "BUILD_NUMBER=${BUILD_NUMBER:-$(node -e "console.log(require('./common.json').build)")}" >> $GITHUB_ENV
-
-          - name: Deploy common assets
-            run: |
-              cd web-apps/build
-              node scripts/deploy-common.js
-
-          - name: Deploy HTML templates
-            run: |
-              cd web-apps/build
-              node scripts/deploy-html.js
-
-          - name: Deploy editor resources
-            run: |
-              cd web-apps/build
-              node scripts/deploy-resources.js
-
-          - name: Deploy reporter view
-            run: |
-              cd web-apps/build
-              node scripts/deploy-reporter.js
-
-          - name: Inline SVG sprites
-            run: |
-              cd web-apps/build
-              node scripts/inline-svgs.js
-
-          - name: Deploy theme images
-            run: |
-              cd web-apps/build
-              THEME=euro-office node scripts/deploy-theme-images.js
-
-          - name: Deploy embed builds
-            run: |
-              cd web-apps/build
-              node scripts/deploy-embed.js
-
-          - name: Build mobile apps (framework7-react, direct webpack — replaces grunt exec:webpack_app_build)
-            run: |
-              cd web-apps/vendor/framework7-react
-              npm install --include=dev --production=false
-              pids=()
-              TARGET_EDITOR=word  NODE_ENV=production node build/build.js & pids+=($!)
-              TARGET_EDITOR=cell  NODE_ENV=production node build/build.js & pids+=($!)
-              TARGET_EDITOR=slide NODE_ENV=production node build/build.js & pids+=($!)
-              TARGET_EDITOR=visio NODE_ENV=production node build/build.js & pids+=($!)
-              rc=0; for pid in "${pids[@]}"; do wait "$pid" || rc=1; done; exit $rc
-
-          - name: Run webpack (documenteditor, spreadsheeteditor, presentationeditor, visioeditor, pdfeditor, forms)
-            run: |
-              cd web-apps/build
-              pids=()
-              THEME=euro-office node_modules/.bin/webpack --config webpack.documenteditor.mjs &     pids+=($!)
-              THEME=euro-office node_modules/.bin/webpack --config webpack.spreadsheeteditor.mjs &  pids+=($!)
-              THEME=euro-office node_modules/.bin/webpack --config webpack.presentationeditor.mjs & pids+=($!)
-              THEME=euro-office node_modules/.bin/webpack --config webpack.visioeditor.mjs &        pids+=($!)
-              THEME=euro-office node_modules/.bin/webpack --config webpack.pdfeditor.mjs &          pids+=($!)
-              THEME=euro-office node_modules/.bin/webpack --config webpack.forms.mjs &              pids+=($!)
-              rc=0; for pid in "${pids[@]}"; do wait "$pid" || rc=1; done; exit $rc
+          - name: Build web-apps
+            working-directory: web-apps/build
+            env:
+                BUILD_ROOT: ${{ github.workspace }}/web-apps/deploy
+                THEME: euro-office
+            run: node scripts/build-pipeline.js
