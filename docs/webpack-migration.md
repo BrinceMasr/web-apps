@@ -11,7 +11,7 @@ Branch: `build/webpack-migration`. Merged: 2026-06-15.
 
 **After**: Six webpack configs (one per editor) handle JS/CSS bundling. Six Node.js scripts handle everything else. A parallel orchestrator (`build/scripts/build-pipeline.js`) replaces the sequential Makefile chain.
 
-**CI time**: ~7 minutes → ~2 minutes (cold runner). **Local (eo container, SKIP_MOBILE=1, cold cache)**: ~101s.
+**CI time**: ~7 minutes → ~2 minutes (cold runner) — speedup comes from webpack's faster bundling vs r.js, plus `build-pipeline.js` running all Phase 1 tasks in parallel. **Local (eo container, SKIP_MOBILE=1, cold cache)**: ~101s.
 
 **Editors covered**: documenteditor, spreadsheeteditor, presentationeditor, visioeditor, pdfeditor, forms.
 
@@ -194,6 +194,20 @@ Run-to-run variance of ~10s is normal (Docker CPU scheduling, page cache). Both 
 **Why:** When a phase task fails, `phase()` sends SIGTERM to all sibling processes. Killed tasks' buffered stderr was discarded — if the killed task had begun emitting a useful error before being killed, that output was silently lost.
 
 **What:** One line added to `runTask()`: `stderrBuf` is flushed in the `signal` branch of `child.on('exit')`, matching the existing flush in the non-zero exit branch. Diagnostic output from a killed task is now visible.
+
+### CI: build.yml switched from sequential steps to build-pipeline.js (2026-06-18)
+
+**Why:** `build.yml` previously ran 12 individual sequential steps (sprites, deploy-*, webpack ×6, mobile ×4, verify ×2) with bash `&` parallelism only within the webpack and mobile steps. This didn't realise the full Phase 1 fan-out that `build-pipeline.js` provides, and duplicated the orchestration logic. The e2e workflow was already using `build-pipeline.js` directly.
+
+**What:** The 12 steps collapsed into three:
+
+1. `npm install` — unchanged
+2. `Merge translations` — kept as a separate step (not in the pipeline)
+3. `Build web-apps` — `node scripts/build-pipeline.js` with `BUILD_ROOT`, `THEME`, `PRODUCT_VERSION` in env
+
+`PRODUCT_VERSION` guard, `BUILD_NUMBER` resolution, and `BUILD_ROOT` defaulting all move inside the pipeline. `BUILD_ROOT` is set explicitly to `${{ github.workspace }}/web-apps/deploy` rather than computed in shell.
+
+The Tier-1 gates (verify-replacements preflight + verify-bundles/verify-deploy final gate) are now part of every CI run via the pipeline, rather than being separate steps that could be skipped or reordered.
 
 ---
 
