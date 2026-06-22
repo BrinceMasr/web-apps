@@ -22,7 +22,6 @@
 const fs   = require('fs');
 const path = require('path');
 const { optimize: svgoOptimize } = require('svgo');
-const sharp = require('sharp');
 
 // ---- svgo config ------------------------------------------------------------
 
@@ -153,6 +152,7 @@ function writeSVG(srcPath, destPath) {
 // JPEG: quality 95 (near-lossless; jpegtran would be lossless but sharp always re-encodes).
 // GIF: sharp 0.33+ optimizer via libvips.
 async function writeRaster(srcPath, destPath) {
+    const sharp = require('sharp');
     ensureDir(path.dirname(destPath));
     const ext = path.extname(srcPath).toLowerCase();
     const img  = sharp(srcPath);

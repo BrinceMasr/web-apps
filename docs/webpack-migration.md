@@ -23,12 +23,15 @@ Branch: `build/webpack-migration`. Merged: 2026-06-15.
 # In the eo container, from web-apps/build/
 PRODUCT_VERSION=9.2.1 BUILD_ROOT=/var/www/onlyoffice/documentserver THEME=euro-office node scripts/build-pipeline.js
 
-# Or via Makefile (DocumentServer repo)
-make web-apps-dev
-SKIP_MOBILE=1 make web-apps-dev   # skip ~90s mobile build when only touching desktop code
+# Or via Makefile — invoke inside the eo container from the host:
+docker exec eo make web-apps
+docker exec eo make web-apps-dev              # incremental (node_modules must exist)
+docker exec eo make web-apps-dev SKIP_MOBILE=1
 ```
 
 `PRODUCT_VERSION` is required and must match the SDK version (see gotcha #1 below).
+
+For container setup (docker-compose, volume mounts, the macOS branch-switch/stale-mount gotcha) see `DocumentServer/develop/setup/`.
 
 ---
 

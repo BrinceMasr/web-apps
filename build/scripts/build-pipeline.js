@@ -187,7 +187,7 @@ async function phase(title, taskSpecs) {
             t.promise.then(r => {
                 if (r.code > 0 && !aborted) {
                     aborted = true;
-                    running.forEach(o => o.kill());
+                    running.forEach(o => { try { o.kill(); } catch (_) {} });
                 }
                 return r;
             })

@@ -70,7 +70,6 @@ const DEST = path.join(BUILD_ROOT, 'web-apps', 'apps', 'presentationeditor', 'ma
 (async () => {
     const source = fs.readFileSync(SRC, 'utf8');
     const result = await minify(source, {
-        mangle: false,
         format: {
             comments: false,
             preamble: PREAMBLE,
