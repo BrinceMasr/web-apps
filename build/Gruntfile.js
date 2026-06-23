@@ -599,6 +599,15 @@ module.exports = function(grunt) {
                     replacements: [{
                         from: /\@\@SRC_ROOT\@\@/g,
                         to: SRC_ROOT
+                    }, {
+                        from: /\{\{APP_TITLE_TEXT\}\}/g,
+                        to: _themVal(process.env.APP_TITLE_TEXT, 'app_title')
+                    }, {
+                        from: /\{\{LOADER_LOGO\}\}/g,
+                        to: function() { return '../../common/main/resources/img/header/' + (global.themeMeta.loader_logo || 'dark-logo_s.svg'); }
+                    }, {
+                        from: /\{\{LOADER_LOGO_DARK\}\}/g,
+                        to: function() { return '../../common/main/resources/img/header/' + (global.themeMeta.loader_logo_dark || 'header-logo_s.svg'); }
                     }]
                 }
             },
