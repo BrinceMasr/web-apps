@@ -15,8 +15,8 @@
         .loader-logo-light,
         .loader-logo-dark { width: 240px; max-width: 80%; height: auto; vertical-align: middle; }
         .loader-logo-dark { display: none; }
-        .theme-dark .loader-logo-light { display: none; }
-        .theme-dark .loader-logo-dark { display: inline-block; }
+        .theme-type-dark .loader-logo-light { display: none; }
+        .theme-type-dark .loader-logo-dark { display: inline-block; }
 
         .theme-dark {
             --romb-start-color: #555;
@@ -72,11 +72,11 @@
             margin-bottom: 5px;
         }
 
-        .theme-dark .loadmask {
+        .theme-type-dark .loadmask {
             background-color: #555;
         }
 
-        .theme-dark .loader-page-text {
+        .theme-type-dark .loader-page-text {
             color: rgba(255, 255, 255, 0.8);
         }
 
