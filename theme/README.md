@@ -24,18 +24,20 @@ the active theme's brand.
 
 Logo paths resolve to `apps/common/main/resources/img/header/<file>`, which
 `deploy-theme-images` overwrites with the active theme's versions. An environment variable
-of the same name (e.g. `APP_TITLE_TEXT`) overrides the config value when set.
+of the same name (e.g. `APP_TITLE_TEXT`) overrides the config value when set. **Note:**
+`loader_logo` and `loader_logo_dark` are config-file-only keys — they have no env-var
+override path.
 
 The splash loader shows `{{LOADER_LOGO}}` by default and `{{LOADER_LOGO_DARK}}` when the
-page is in dark mode (`.theme-dark`). This replaces the upstream animated "romb" diamonds,
-which were the ONLYOFFICE logo.
+page is in dark mode (`.theme-type-dark`). This replaces the upstream animated "romb"
+diamonds, which were the ONLYOFFICE logo.
 
 ## Branding customization is unlocked (issue #89)
 
 Upstream gates integrator branding — `customization.loaderLogo`, `loaderName`, header
 `logo`, custom fonts — behind the commercial license (`asc_getCanBranding()`), so passing
 those options on the community build raised a "paid feature" dialog. As an AGPL fork we
-drop that license factor in each editor's `Main.js` (`appOptions.canBrandingExt`), so
+drop that license factor in each editor's `Main.js` and mobile `appOptions.js` (`appOptions.canBrandingExt`), so
 integrators can use the documented OnlyOffice branding API without the dialog.
 
 ## Adding a theme / replacing assets
