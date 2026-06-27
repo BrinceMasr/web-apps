@@ -229,15 +229,15 @@ export const ContextMenu = {
             itemsText = [];
 
         if (canCopy) {
-            itemsIcon.push({ event: 'copy', icon: 'icon-copy' });
+            itemsIcon.push({ event: 'copy', icon: icons.copy.id });
         }
 
         if (!isDisconnected) {
             if (canCopy && !locked && isAllowedEditing) {
-                itemsIcon.push({ event: 'cut', icon: 'icon-cut' });
+                itemsIcon.push({ event: 'cut', icon: icons.cut.id });
             }
             if (!locked && isAllowedEditing) {
-                itemsIcon.push({ event: 'paste', icon: 'icon-paste' });
+                itemsIcon.push({ event: 'paste', icon: icons.paste.id });
             }
             if (canViewComments && controller.isComments) {
                 itemsText.push({ caption: _t.menuViewComment, event: 'viewcomment' });
