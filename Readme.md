@@ -98,7 +98,7 @@ Run `docker compose` from the `euro-office/fork/build` directory:
 docker compose exec eo bash
 
 # Then inside the container:
-export BUILD_NUMBER=0 THEME=euro-office && cd /var/www/onlyoffice/web-apps-develop/build && grunt --skip-imagemin --skip-babel
+export BUILD_NUMBER=0 THEME=euro-office && cd /var/www/onlyoffice/web-apps-develop/build && grunt --skip-imagemin
 ```
 
 ### Build Flags
@@ -106,7 +106,6 @@ export BUILD_NUMBER=0 THEME=euro-office && cd /var/www/onlyoffice/web-apps-devel
 | Flag | Description |
 |------|-------------|
 | `--skip-imagemin` | Skip image optimization (faster builds) |
-| `--skip-babel` | Skip ES5 transpilation for IE compatibility (modern browsers only, no `ie/` directory created) |
 
 ### Environment Variables
 

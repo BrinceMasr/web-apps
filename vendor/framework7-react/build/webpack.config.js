@@ -2,8 +2,7 @@ import webpack from 'webpack';
 import CopyWebpackPlugin from 'copy-webpack-plugin';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import MiniCssExtractPlugin from "mini-css-extract-plugin";
-import CssMinimizerPlugin from "css-minimizer-webpack-plugin";
-import TerserPlugin from "terser-webpack-plugin";
+import { EsbuildPlugin } from 'esbuild-loader';
 // import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
 import { themeGlobalVars, themeDefines } from '../../../build/theme.config.mjs';
 import fs from 'fs';
@@ -82,21 +81,7 @@ const config = {
     //   }
     // },
     minimizer: [
-      new TerserPlugin({
-        terserOptions: {
-          compress: {
-            drop_console: env === 'production',
-          },
-        },
-      }),
-      new CssMinimizerPlugin({
-        minimizerOptions: {
-          preset: ['default', {
-            discardComments: { removeAll: true },
-            colormin: false,
-          }],
-        },
-      }),
+      new EsbuildPlugin({ target: 'es2015', css: true }),
     ],
     moduleIds: 'deterministic',
   },
@@ -223,13 +208,6 @@ const config = {
     new webpack.BannerPlugin(`\n* Version: ${process.env.PRODUCT_VERSION} (build: ${process.env.BUILD_NUMBER})\n`),
 
     ...(env === 'production' ? [
-      new CssMinimizerPlugin({
-        minimizerOptions: {
-          preset: ['default', {
-            discardComments: { removeAll: true },
-          }],
-        },
-      }),
       new webpack.optimize.ModuleConcatenationPlugin(),
     ] : [
       new webpack.HotModuleReplacementPlugin(),
