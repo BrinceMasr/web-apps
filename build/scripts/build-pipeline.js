@@ -73,6 +73,11 @@ const THEME = process.env.THEME || 'default';
 
 const SKIP_MOBILE = process.env.SKIP_MOBILE === '1';
 
+// Default every child to production so mobile (webpack.config.js defaults to
+// 'development') and desktop (defaults to 'production') agree — without this the
+// pipeline could silently emit a dev mobile bundle. Overridable: NODE_ENV=development.
+const NODE_ENV = process.env.NODE_ENV || 'production';
+
 // Env passed to every child process
 const CHILD_ENV = {
     ...process.env,
@@ -80,6 +85,7 @@ const CHILD_ENV = {
     PRODUCT_VERSION,
     BUILD_NUMBER,
     THEME,
+    NODE_ENV,
 };
 
 // ---- output helpers ---------------------------------------------------------
@@ -230,6 +236,9 @@ async function main() {
         `  BUILD_NUMBER     ${BUILD_NUMBER}`,
         `  THEME            ${THEME}`,
         `  SKIP_MOBILE      ${SKIP_MOBILE}`,
+        `  NODE_ENV         ${NODE_ENV === 'production'
+            ? GREEN(NODE_ENV)
+            : RED(`${NODE_ENV}  ⚠ DEV BUILD — minifier off; not for deploy or fix-validation`)}`,
         '',
     ].join('\n'));
 
@@ -267,7 +276,7 @@ async function main() {
         }
         MOBILE_EDITORS.forEach(editor =>
             phase1Tasks.push(task(`mobile:${editor}`, node, ['build/build.js'],
-                { cwd: FRAMEWORK7_DIR, env: { TARGET_EDITOR: editor, NODE_ENV: 'production' } }
+                { cwd: FRAMEWORK7_DIR, env: { TARGET_EDITOR: editor } } // NODE_ENV now in CHILD_ENV
             ))
         );
     }

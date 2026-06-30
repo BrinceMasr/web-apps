@@ -51,7 +51,9 @@ const config = {
     },
     modules: [path.resolve(__dirname, '..', 'node_modules'), 'node_modules'],
   },
-  watch: env === 'development',
+  // Watch is opt-in (WATCH=1), decoupled from NODE_ENV — so a dev-mode build can
+  // be a one-shot (debuggable, exits) instead of hanging the pipeline in watch.
+  watch: process.env.WATCH === '1',
   watchOptions: {
     aggregateTimeout: 600,
     poll: 1000,
