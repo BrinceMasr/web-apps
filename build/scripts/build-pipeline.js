@@ -31,11 +31,13 @@
 // Phase layout (wall-clock optimised):
 //   Phase 1 — all parallel:
 //     sprites.sh, deploy-common, deploy-html, deploy-reporter,
-//     deploy-theme-images, deploy-embed, webpack ×6, mobile ×4
-//   Phase 2 — parallel (start as soon as Phase 1 done):
+//     deploy-embed, webpack ×6, mobile ×4
+//   Phase 2 — conditional on !SKIP_MOBILE (sequential after Phase 1):
+//     deploy-mobile     (copies mobile output from source tree to BUILD_ROOT)
+//   Phase 3 — parallel (start as soon as Phase 2 done):
 //     deploy-resources  (deploys per-editor toolbar/icons.svg)
-//     deploy-theme-img  (overwrites common/mobile images)
-//   Phase 3 — sequential (must follow Phase 2):
+//     deploy-theme-img  (overwrites common/mobile images; must follow deploy-mobile)
+//   Phase 4 — sequential (must follow Phase 3):
 //     inline-svgs       (inlines icons.svg from deploy-resources + HTML from Phase 1)
 
 const { spawn }  = require('child_process');
@@ -272,34 +274,40 @@ async function main() {
 
     const p1 = await phase('Phase 1 — parallel', phase1Tasks);
 
-    // ---- phase 2: deps resolved after phase 1 -------------------------------
-    // Phase 2: produce all assets that inline-svgs will inline.
+    // ---- phase 2: deploy-mobile (conditional) --------------------------------
+    // Must run before deploy-theme-images: both write to <editor>/mobile/resources/img/
+    // and theme images must win the overlay (deploy-theme-images.js:69).
+    const pMobile = SKIP_MOBILE ? [] : await phase('Phase 2 — mobile deploy', [
+        task('deploy-mobile', node, ['scripts/deploy-mobile.js']),
+    ]);
+
+    // ---- phase 3: deps resolved after phases 1 + 2 --------------------------
     // deploy-resources deploys per-editor toolbar/icons.svg (the sprite inlined into HTML).
     // deploy-theme-img overwrites common/mobile images — disjoint from deploy-resources, safe to run together.
-    const p2 = await phase('Phase 2 — parallel', [
+    const p2 = await phase('Phase 3 — parallel', [
         task('deploy-resources', node, ['scripts/deploy-resources.js']),
         task('deploy-theme-img', node, ['scripts/deploy-theme-images.js']),
     ]);
 
-    // Phase 3: inline-svgs MUST run after Phase 2 — it inlines per-editor toolbar/icons.svg
+    // Phase 4: inline-svgs MUST run after Phase 3 — it inlines per-editor toolbar/icons.svg
     // (written by deploy-resources) as well as common sprites and HTML from Phase 1.
     // Running it concurrently with deploy-resources races the per-editor icons.svg.
-    const p3 = await phase('Phase 3 — inline', [
+    const p3 = await phase('Phase 4 — inline', [
         task('inline-svgs', node, ['scripts/inline-svgs.js']),
     ]);
 
-    // ---- phase 4: output-side gates (Check B + Check C) ---------------------
+    // ---- phase 5: output-side gates (Check B + Check C) ---------------------
     // verify-bundles: scans built bundles for surviving {{TOKEN}} literals.
     // verify-deploy:  asserts every required vendor/embed/main artifact exists.
     // Both are independent reads of BUILD_ROOT — safe to run in parallel.
-    const p4 = await phase('Phase 4 — gates', [
+    const p4 = await phase('Phase 5 — gates', [
         task('verify-bundles', node, ['scripts/verify-bundles.mjs']),
         task('verify-deploy',  node, ['scripts/verify-deploy.mjs']),
     ]);
 
     // ---- summary -------------------------------------------------------------
 
-    const all = [...p0, ...p1, ...p2, ...p3, ...p4];
+    const all = [...p0, ...p1, ...pMobile, ...p2, ...p3, ...p4];
     const wallMs = Date.now() - wallStart;
 
     const longestLabel = Math.max(...all.map(r => r.label.length));
