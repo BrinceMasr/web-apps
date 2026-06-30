@@ -30,22 +30,37 @@ Makefile in `DocumentServer/develop/setup/`.
 
 ## Pipeline overview
 
-The build runs in two parallel phases. Wall clock is dominated by webpack (~41s).
+A preflight audit, then five phases. Wall clock is dominated by webpack.
 
 ```
+Preflight
+  verify-replacements.mjs     fail early if load-bearing string-replace idioms drifted
+
 Phase 1 — all in parallel
-  sprites.sh                  generate SVG sprite sheets into source tree
+  deploy-sprites.js           generate SVG sprite sheets into source tree
   deploy-common.js            copy SDK, vendor JS, common HTML/SVG assets
   deploy-html.js              *.html.deploy → *.html, @@SRC_ROOT@@ replacement
   deploy-reporter.js          terser-minify presentationeditor/app.reporter.js
-  deploy-theme-images.js      copy theme raster + SVG images
   deploy-embed.js             build embed (LESS + bundle + HTML) for 4 editors
-  webpack ×6                  bundle app.js / code.js / app.css / locale per editor
-  mobile ×4                   framework7-react builds (word, cell, slide, visio)
+  webpack ×6                  bundle app.js / code.js / app.css / locale per editor (desktop, Terser)
+  mobile ×4                   framework7-react webpack builds into the SOURCE tree (word, cell, slide, visio; esbuild)
 
-Phase 2 — parallel (as soon as deps complete)
-  deploy-resources.js         copy per-editor resources (needs sprites from phase 1)
-  inline-svgs.js              inline SVG/script tags into HTML (needs deploy-html + deploy-common)
+Phase 2 — mobile deploy (skipped when SKIP_MOBILE=1)
+  deploy-mobile.js            copy mobile output (index.html → index.html + index_loader.html, dist/,
+                              css/, locale/, resources/img/) from source tree → BUILD_ROOT for the 4
+                              mobile editors. MUST precede deploy-theme-images' mobile img overlay.
+
+Phase 3 — parallel
+  deploy-resources.js         copy per-editor main/resources (needs sprites from phase 1)
+  deploy-theme-images.js      overlay theme images (common + per-editor mobile)
+
+Phase 4 — inline
+  inline-svgs.js              inline SVG/script tags into built HTML (needs deploy-html + deploy-common)
+
+Phase 5 — gates (fail the build loudly)
+  verify-bundles.mjs          scan built bundles for surviving {{TOKEN}} literals
+  verify-deploy.mjs           assert every required artifact exists (incl. mobile when !SKIP_MOBILE)
+  verify-browser-target.mjs   no hardcoded browser targets; configs import build/browser-floor.mjs
 ```
 
 ### What this replaced
@@ -53,11 +68,11 @@ Phase 2 — parallel (as soon as deps complete)
 | Grunt task | Replacement |
 |---|---|
 | `deploy-theme` | Internal only; webpack uses `build/theme.config.mjs` |
-| `prebuild-svg-sprites` | `sprites.sh` (phase 1) |
+| `prebuild-svg-sprites` | `deploy-sprites.js` (phase 1) |
 | 14 common tasks (api, sdk, jquery, …) | `deploy-common.js` |
 | `deploy-app-main` ×5 editors | `deploy-resources.js` + `deploy-html.js` + webpack factory |
 | `deploy-app-forms` | `webpack.forms.mjs` + `deploy-html.js` + inline-svgs |
-| `deploy-app-mobile` ×4 | framework7-react build step |
+| `deploy-app-mobile` ×4 | framework7-react build (→ source tree) + `deploy-mobile.js` (→ BUILD_ROOT) |
 | `deploy-app-embed` ×4 | `deploy-embed.js` |
 | `deploy-reporter` | `deploy-reporter.js` |
 | `deploy-theme-images` | `deploy-theme-images.js` |
@@ -73,7 +88,9 @@ Phase 2 — parallel (as soon as deps complete)
 | `BUILD_ROOT` | **yes** | `../deploy` | Absolute path to DocumentServer output root. |
 | `BUILD_NUMBER` | no | `GITHUB_RUN_NUMBER` → `common.json.build` | Appended to version string in JS bundles. Auto-increments in CI via `GITHUB_RUN_NUMBER`. |
 | `THEME` | no | `default` | Theme directory name under `theme/`. EuroOffice uses `euro-office`. |
-| `SKIP_MOBILE` | no | `0` | Set to `1` to skip framework7-react builds (~50s). Safe when not touching mobile code. |
+| `SKIP_MOBILE` | no | `0` | Set to `1` to skip framework7-react builds + the Phase 2 mobile deploy (~50s). Safe when not touching mobile code. |
+| `NODE_ENV` | no | `production` | Build mode, forced onto every child. `development` = unminified, `console` kept, esbuild minifier off for mobile (so the ES target + `drop_console` do NOT run — never validate a fix on a dev build). The pipeline echoes the resolved mode in its banner (green prod / red DEV warning). |
+| `WATCH` | no | `0` | `1` = mobile webpack watch mode (live rebuild). Decoupled from `NODE_ENV`; for direct `build.js` runs only — the pipeline would hang on a watching child. |
 | `APP_COPYRIGHT` | no | auto | Copyright line in JS preamble. |
 | `COEDITING_DESKTOP` | no | Russian default | Help page token. |
 | `PLUGIN_LINK` | no | onlyoffice.com URL | Help page token. |
@@ -87,8 +104,10 @@ All scripts live in `build/scripts/`. Run from `build/` with `node scripts/<name
 
 ### `build-pipeline.js`
 Orchestrator. Resolves env vars, validates `PRODUCT_VERSION`, determines `BUILD_NUMBER`
-from `GITHUB_RUN_NUMBER` or `common.json.build`, then runs phases 1 and 2.
-Each step is prefixed in stdout. Summary table with per-step timing at end.
+from `GITHUB_RUN_NUMBER` or `common.json.build`, forces `NODE_ENV` (default `production`)
+onto every child, then runs the preflight + five phases (see Pipeline overview).
+Echoes the resolved build mode in its banner. Each step is prefixed in stdout; summary
+table with per-step timing at end.
 
 ### `deploy-common.js`
 Replaces 14 grunt common tasks. Copies SDK assets (sdkjs), api.js (with
@@ -137,6 +156,32 @@ Replaces `grunt deploy-app-embed`. For each of 4 editors: clean embed dir,
 bundle JS (terser concat), compile LESS, copy locale + HTML, replace
 `@@SRC_ROOT@@`, inline `?__inline=true` scripts.
 
+### `deploy-mobile.js`
+Phase 2. The mobile webpack (framework7-react) builds into the **source tree**
+(`apps/<editor>/mobile/`), not `BUILD_ROOT`. This copies the output to
+`BUILD_ROOT/web-apps/apps/<editor>/mobile/` for the 4 mobile editors:
+`index.html` → `index.html` + `index_loader.html`, `dist/`, `css/`, `locale/`,
+`resources/img/`. Soft-skips an editor with no built `index.html`.
+**Must run before `deploy-theme-images`** (both write `mobile/resources/img/`;
+theme images win the overlay). Its absence shipped mobile with only `resources/`
+(404) — closes #258.
+
+### Gate scripts (`verify-*.mjs`)
+Preflight + Phase 5. Fail the build loudly rather than ship a silent defect:
+- `verify-replacements.mjs` — preflight: source-side string-replace idiom audit.
+- `verify-bundles.mjs` — scans built bundles for surviving `{{TOKEN}}` literals.
+- `verify-deploy.mjs` — asserts every required artifact exists (vendor/embed/main/forms;
+  mobile `index.html`/`dist`/`css`/`locale` when `!SKIP_MOBILE`).
+- `verify-browser-target.mjs` — fails if any webpack/babel/postcss config hardcodes a
+  browser target instead of importing from `build/browser-floor.mjs`.
+
+### `browser-floor.mjs` (config, not a script)
+Single source of truth for the mobile browser floor — `BROWSERSLIST` + `ESBUILD_TARGET`
+at **ES2022** (Nextcloud floor: iOS 17 / Safari 17; Android 9 = updatable WebView).
+Imported by the mobile `webpack.config.js` (esbuild target), `babel.config.js`, and
+`postcss.config.js`. Setting a target anywhere else is rejected by
+`verify-browser-target.mjs`. See `.claude/findings/mobile-i18next-esbuild-es2015.md`.
+
 ### `lib/build-utils.js`
 Shared helpers used by all scripts above. Key exports:
 - `SVGO_CONFIG` — load-bearing: `removeHiddenElems:false`, `cleanupIds:false`
@@ -161,7 +206,13 @@ Shared helpers used by all scripts above. Key exports:
 All configs are thin wrappers around `webpack.editor.factory.mjs`. The factory
 handles: AMD module compatibility, LESS compilation, theme token replacement
 via `build/theme.config.mjs`, `CopyWebpackPlugin` for locale, and `TerserPlugin`
-for minification.
+for minification (desktop default `NODE_ENV || 'production'`).
+
+**Mobile is a separate webpack build** in `vendor/framework7-react/build/webpack.config.js`
+(not the factory). It uses `EsbuildPlugin` for minify + transpile, targets ES2022 via
+`build/browser-floor.mjs`, and defaults `NODE_ENV` to `development` — the pipeline forces
+`production` (see `NODE_ENV` in the env table). It writes to the **source tree**, then
+`deploy-mobile.js` copies to `BUILD_ROOT`.
 
 ### Theme contract (`build/theme.config.mjs`)
 Single source of truth for all brand/token substitution:
@@ -232,30 +283,26 @@ six configs inherit it. After the first full build, incremental webpack runs
 take ~3–5s. Cache lives in `node_modules/.cache/webpack/` and invalidates
 automatically when source or config changes.
 
-### 2. CI: call `build-pipeline.js` directly
-**Current state:** CI runs individual steps as separate `run:` blocks. This works
-but adds YAML maintenance overhead as steps change.
-**Improvement:** Replace the 7 individual `run:` blocks with a single call to
-`node scripts/build-pipeline.js`. CI gets the same parallel execution the
-orchestrator provides locally.
-**Blocker:** The "Resolve build paths" step currently also validates env vars
-(PRODUCT_VERSION sanity check). This logic needs to move into `build-pipeline.js`
-(already partially there — the script validates PRODUCT_VERSION on startup).
+### 2. CI: call `build-pipeline.js` directly ✓ done
+The e2e workflow and the bake Dockerfile both invoke `node scripts/build-pipeline.js`
+directly; env-var validation lives in the orchestrator.
 
-### 3. Makefile update (DocumentServer repo)
-**Branch:** `build/makefile-webpack-product-version` in DocumentServer repo.
-**Status:** Still calls `grunt --skip-imagemin`. Needs to call `build-pipeline.js`
-with `PRODUCT_VERSION=$(PRODUCT_VERSION) BUILD_ROOT=$(EO_ROOT) THEME=euro-office`.
-**Note:** Makefile no longer needs to manage `BUILD_NUMBER` — the orchestrator
-reads `GITHUB_RUN_NUMBER` in CI and `common.json.build` locally.
+### 3. Makefile update (DocumentServer repo) ✓ done
+`develop/setup/Makefile` calls `build-pipeline.js` (not grunt). Follow-up tracked in
+Euro-Office/DocumentServer#259: split into explicit `web-apps` / `web-apps-prod` /
+`web-apps-dev` (mode-in-recipe) targets so the build mode can't be flipped silently
+by the shell environment.
 
-### 4. esbuild vs TerserPlugin — considered and deferred
-esbuild is a Go-based JS minifier that is 10–100× faster than terser. There
-is a well-maintained webpack plugin (`esbuild-loader`'s `EsbuildPlugin`) that
-replaces `TerserPlugin`. This would cut webpack time from ~41s to potentially
-under 10s.
+### 4. esbuild vs TerserPlugin — desktop deferred, **mobile switched**
+**Mobile already uses `EsbuildPlugin`** (`vendor/framework7-react/build/webpack.config.js`).
+Note the sharp edge it caused: esbuild downlevels syntax to its `target`, and an
+`es2015` target mis-compiled i18next 25's class internals (`we is not a function`) —
+fixed by targeting ES2022 via `browser-floor.mjs`. Desktop is still deferred:
 
-**Why we have not switched:**
+esbuild is a Go-based JS minifier 10–100× faster than terser, via `esbuild-loader`'s
+`EsbuildPlugin`. This would cut desktop webpack time substantially.
+
+**Why we have not switched desktop:**
 
 Our TerserPlugin config uses `mangle: false`. This is intentional and
 load-bearing. The codebase contains patterns that break with any identifier
@@ -306,12 +353,18 @@ suitable for AI tools to reason about file ownership, dependencies, and constrai
 ```yaml
 pipeline:
   orchestrator: build/scripts/build-pipeline.js
+  node_env: forced onto every child; default production, honours NODE_ENV=development
   phases:
+    - phase: preflight
+      steps:
+        - label: verify-replacements
+          cmd: [node, scripts/verify-replacements.mjs]
+          checks: source-side string-replace idioms have not drifted
     - phase: 1
       parallel: true
       steps:
         - label: sprites
-          cmd: [bash, ./sprites.sh]
+          cmd: [node, scripts/deploy-sprites.js]
           writes: apps/*/main/resources/img/toolbar/icons.svg (source tree)
         - label: deploy-common
           cmd: [node, scripts/deploy-common.js]
@@ -327,11 +380,6 @@ pipeline:
           cmd: [node, scripts/deploy-reporter.js]
           writes: $BUILD_ROOT/web-apps/apps/presentationeditor/main/app.reporter.js
           env_required: [BUILD_ROOT]
-        - label: deploy-theme-images
-          cmd: [node, scripts/deploy-theme-images.js]
-          writes: $BUILD_ROOT/web-apps/apps/common/main/resources/img/**
-          writes: $BUILD_ROOT/web-apps/apps/*/mobile/resources/img/**
-          env_required: [BUILD_ROOT, THEME]
         - label: deploy-embed
           cmd: [node, scripts/deploy-embed.js]
           writes: $BUILD_ROOT/web-apps/apps/*/embed/**
@@ -347,23 +395,53 @@ pipeline:
         - label: mobile
           cmd: [node, build/build.js]
           cwd: vendor/framework7-react
-          writes: $BUILD_ROOT/web-apps/apps/*/mobile/**
-          env_required: [TARGET_EDITOR, BUILD_ROOT]
+          writes: apps/*/mobile/{index.html,dist,css}  # SOURCE tree, NOT BUILD_ROOT
+          env_required: [TARGET_EDITOR]   # NODE_ENV inherited from pipeline CHILD_ENV
+          note: esbuild target ES2022 via build/browser-floor.mjs
     - phase: 2
+      condition: not SKIP_MOBILE
+      steps:
+        - label: deploy-mobile
+          cmd: [node, scripts/deploy-mobile.js]
+          reads: apps/*/mobile/{index.html,dist,css,locale,resources/img} (source tree)
+          writes: $BUILD_ROOT/web-apps/apps/*/mobile/**  # incl. index_loader.html
+          env_required: [BUILD_ROOT]
+          must_precede: deploy-theme-images (both write mobile/resources/img; theme wins)
+    - phase: 3
       parallel: true
       depends_on:
         deploy-resources: [sprites]
-        inline-svgs: [deploy-common, deploy-html]
       steps:
         - label: deploy-resources
           cmd: [node, scripts/deploy-resources.js]
           writes: $BUILD_ROOT/web-apps/apps/*/main/resources/{help,img,watermark,numbering,symboltable}/**
           env_required: [BUILD_ROOT]
+        - label: deploy-theme-images
+          cmd: [node, scripts/deploy-theme-images.js]
+          writes: $BUILD_ROOT/web-apps/apps/common/main/resources/img/**
+          writes: $BUILD_ROOT/web-apps/apps/*/mobile/resources/img/**  # overlays deploy-mobile
+          env_required: [BUILD_ROOT, THEME]
+    - phase: 4
+      depends_on:
+        inline-svgs: [deploy-common, deploy-html, deploy-resources]
+      steps:
         - label: inline-svgs
           cmd: [node, scripts/inline-svgs.js]
           modifies: $BUILD_ROOT/web-apps/apps/*/main/*.html
           modifies: $BUILD_ROOT/web-apps/apps/common/index.html
           env_required: [BUILD_ROOT]
+    - phase: 5
+      parallel: true
+      steps:
+        - label: verify-bundles
+          cmd: [node, scripts/verify-bundles.mjs]
+          checks: no surviving {{TOKEN}} literals in built bundles
+        - label: verify-deploy
+          cmd: [node, scripts/verify-deploy.mjs]
+          checks: required artifacts exist (vendor/embed/main/forms; mobile when not SKIP_MOBILE)
+        - label: verify-browser-target
+          cmd: [node, scripts/verify-browser-target.mjs]
+          checks: no hardcoded browser targets; configs import build/browser-floor.mjs
 
 invariants:
   - id: pipeline-isolation
@@ -388,6 +466,18 @@ invariants:
     description: >
       Always test in incognito or hard-clear SW. Two app.js versions in devtools
       means cache conflict.
+  - id: single-browser-target
+    description: >
+      The mobile browser floor lives ONLY in build/browser-floor.mjs (BROWSERSLIST +
+      ESBUILD_TARGET, ES2022). webpack.config.js / babel.config.js / postcss.config.js
+      import it; never hardcode a target. verify-browser-target.mjs fails the build
+      otherwise. esbuild es2015 mis-compiled i18next 25 class internals — see
+      findings/mobile-i18next-esbuild-es2015.md.
+  - id: mobile-builds-to-source-tree
+    description: >
+      The mobile webpack writes to the SOURCE tree (apps/*/mobile), not BUILD_ROOT.
+      deploy-mobile.js (Phase 2) copies it to BUILD_ROOT. Omitting that copy ships
+      mobile with only resources/ (404) — the #258 regression.
 
 env_vars:
   PRODUCT_VERSION:
@@ -406,6 +496,18 @@ env_vars:
     required: false
     default: default
     consumers: [webpack configs, deploy-theme-images.js]
+  NODE_ENV:
+    required: false
+    default: production   # forced onto every child by build-pipeline.js CHILD_ENV
+    override: NODE_ENV=development honoured (unminified, console kept, mobile esbuild off)
+    note: desktop factory defaults to 'production', mobile webpack to 'development' — the
+          pipeline forces the same value for both; banner echoes the resolved mode
+    consumers: [webpack.editor.factory.mjs, vendor/framework7-react/build/webpack.config.js]
+  WATCH:
+    required: false
+    default: 0
+    description: 1 = mobile webpack watch mode; decoupled from NODE_ENV; direct build.js only
+    consumers: [vendor/framework7-react/build/webpack.config.js]
 
 dead_config_do_not_reproduce:
   - id: images-common
@@ -429,7 +531,7 @@ build_outputs:
     - $BUILD_ROOT/web-apps/apps/{editor}/main/index.html      # deploy-html + inline-svgs
     - $BUILD_ROOT/web-apps/apps/{editor}/main/resources/**    # deploy-resources
     - $BUILD_ROOT/web-apps/apps/{editor}/embed/**             # deploy-embed
-    - $BUILD_ROOT/web-apps/apps/{editor}/mobile/**            # framework7-react
+    - $BUILD_ROOT/web-apps/apps/{editor}/mobile/**            # framework7-react build → deploy-mobile.js (Phase 2)
   common:
     - $BUILD_ROOT/web-apps/apps/common/**                     # deploy-common
   presentation_extra:
