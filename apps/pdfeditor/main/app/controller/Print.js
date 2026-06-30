@@ -137,7 +137,7 @@ define([
             }, this));
             Common.NotificationCenter.on('margins:update', _.bind(this.onUpdateLastCustomMargins, this));
 
-            var eventname = (/Firefox/i.test(navigator.userAgent))? 'DOMMouseScroll' : 'mousewheel';
+            var eventname = 'wheel';
             this.printSettings.$previewBox.on(eventname, _.bind(this.onPreviewWheel, this));
         },
 

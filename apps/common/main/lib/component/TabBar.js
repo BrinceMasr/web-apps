@@ -295,12 +295,7 @@ define([
                 elem.addEventListener ? elem.addEventListener( type, fn, false ) : elem.attachEvent( "on" + type, fn );
             };
 
-            if (Common.Utils.isMac) {
-                this.$bar[0].addEventListener('wheel', _.bind(this._onMouseWheelThrottled, this));
-            } else {
-                var eventname=(/Firefox/i.test(navigator.userAgent))? 'DOMMouseScroll' : 'mousewheel';
-                addEvent(this.$bar[0], eventname, _.bind(this._onMouseWheel,this));
-            }
+            this.$bar[0].addEventListener('wheel', _.bind(this._onMouseWheelThrottled, this));
             addEvent(this.$bar[0], 'dragstart', _.bind(function (event) {
                 event.dataTransfer.effectAllowed = 'copyMove';
             }, this));
@@ -365,7 +360,9 @@ define([
         },
 
         _onMouseWheelThrottled: function(e) {
-            var delta = (e.detail && -e.detail) || e.wheelDelta;
+            var delta = e.deltaY !== undefined
+                ? -(e.deltaMode === 1 ? e.deltaY * 30 : e.deltaY)
+                : ((e.detail && -e.detail) || e.wheelDelta);
             if (Math.abs(delta) < 10) {
                 return;
             }
