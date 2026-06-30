@@ -6,7 +6,7 @@
 > load-bearing — violations cause silent runtime failures.
 
 Euro Office is an AGPL fork of OnlyOffice DocumentServer. This directory contains
-the webpack 5 build system that replaced the original Grunt + r.js pipeline.
+the webpack 5 build system.
 
 ---
 
@@ -63,21 +63,6 @@ Phase 5 — gates (fail the build loudly)
   verify-browser-target.mjs   no hardcoded browser targets; configs import build/browser-floor.mjs
 ```
 
-### What this replaced
-
-| Grunt task | Replacement |
-|---|---|
-| `deploy-theme` | Internal only; webpack uses `build/theme.config.mjs` |
-| `prebuild-svg-sprites` | `deploy-sprites.js` (phase 1) |
-| 14 common tasks (api, sdk, jquery, …) | `deploy-common.js` |
-| `deploy-app-main` ×5 editors | `deploy-resources.js` + `deploy-html.js` + webpack factory |
-| `deploy-app-forms` | `webpack.forms.mjs` + `deploy-html.js` + inline-svgs |
-| `deploy-app-mobile` ×4 | framework7-react build (→ source tree) + `deploy-mobile.js` (→ BUILD_ROOT) |
-| `deploy-app-embed` ×4 | `deploy-embed.js` |
-| `deploy-reporter` | `deploy-reporter.js` |
-| `deploy-theme-images` | `deploy-theme-images.js` |
-| `increment-build` | `BUILD_NUMBER` env var (see below) |
-
 ---
 
 ## Environment variables
@@ -110,7 +95,7 @@ Echoes the resolved build mode in its banner. Each step is prefixed in stdout; s
 table with per-step timing at end.
 
 ### `deploy-common.js`
-Replaces 14 grunt common tasks. Copies SDK assets (sdkjs), api.js (with
+Copies SDK assets (sdkjs), api.js (with
 `{{PRODUCT_VERSION}}` token replacement), apps-common (HTML, SVGs, images),
 and vendor scripts (jQuery, socket.io, xregexp, underscore, iscroll, fetch,
 es6-promise, requirejs-terser, common-embed, monaco).
@@ -134,11 +119,11 @@ Per-editor `main/resources/` copy for all 5 desktop editors:
 
 ### `deploy-reporter.js`
 Terser-minifies `apps/presentationeditor/main/app.reporter.js` with the
-copyright preamble (`mangle: false`, matching grunt's options). The reporter
+copyright preamble (`mangle: false`). The reporter
 HTML is handled by `deploy-html.js`; SVG inlining by `inline-svgs.js`.
 
 ### `inline-svgs.js`
-Replaces grunt-inline. Inlines `<inline src="*.svg"/>` and
+Inlines `<inline src="*.svg"/>` and
 `<script src="*?__inline=true">` tags in all built HTML files.
 **Must run after `deploy-html.js` and `deploy-common.js`** — both regenerate
 HTML from `.html.deploy` templates. Running this script alone after only
@@ -152,7 +137,7 @@ Copies `theme/{THEME}/assets/img/**` to common + per-editor mobile dirs,
 and conditionally copies the embed logo.
 
 ### `deploy-embed.js`
-Replaces `grunt deploy-app-embed`. For each of 4 editors: clean embed dir,
+For each of 4 editors: clean embed dir,
 bundle JS (terser concat), compile LESS, copy locale + HTML, replace
 `@@SRC_ROOT@@`, inline `?__inline=true` scripts.
 
@@ -186,7 +171,7 @@ Imported by the mobile `webpack.config.js` (esbuild target), `babel.config.js`, 
 Shared helpers used by all scripts above. Key exports:
 - `SVGO_CONFIG` — load-bearing: `removeHiddenElems:false`, `cleanupIds:false`
 - `optimizeImages(src, dest, {rastersOnly, svgOnly, exclude})` — sharp + svgo + ico copy
-- `globToRegex(glob)` — converts grunt glob to regex (`*` → `[^/]*`, `**` → `.*`)
+- `globToRegex(glob)` — converts a glob to regex (`*` → `[^/]*`, `**` → `.*`)
 - `copyDirFiltered(src, dest, {include, exclude})` — filtered recursive copy
 - `replaceTokensIn(dir, pairs, {exts})` — in-place token replacement
 
@@ -236,28 +221,24 @@ Violating them causes silent runtime errors that only appear in the browser.
    but does NOT inline `?__inline=true` tags. Running it alone breaks the
    PDF viewer.
 
-2. **grunt ran before webpack (historical)** — during the migration dual-run
-   phase, grunt had to run before the new scripts so the scripts' output was
-   the live version. This ordering constraint no longer applies post-grunt-removal.
-
-3. **`output.clean: false`** in all webpack configs. webpack and the deploy
+2. **`output.clean: false`** in all webpack configs. webpack and the deploy
    scripts both write into `BUILD_ROOT`. If webpack cleaned the output dir,
    it would delete files written by the deploy scripts. Do not set `output.clean: true`.
 
-4. **SVGO config is load-bearing** — `removeHiddenElems: false` and
+3. **SVGO config is load-bearing** — `removeHiddenElems: false` and
    `cleanupIds: false` in `SVGO_CONFIG` in `lib/build-utils.js`. The SVG
    icons use hidden elements and shared IDs for animation/state. Changing
    these options silently breaks icon rendering.
 
-5. **Service worker aggressively caches** — always test in incognito or
+4. **Service worker aggressively caches** — always test in incognito or
    force-clear SW in devtools. Two `app.js` versions in devtools = cache conflict.
 
-6. **`mangle: false` in TerserPlugin** — the codebase uses dynamic property
+5. **`mangle: false` in TerserPlugin** — the codebase uses dynamic property
    access (`window['Common']`, `obj['method']()`) and `var Common = Common || {}`
    namespace guards that break with identifier renaming. Do not enable mangling
    without validating every editor in the browser.
 
-7. **`BUILD_NUMBER` comes from `GITHUB_RUN_NUMBER` in CI** — not from
+6. **`BUILD_NUMBER` comes from `GITHUB_RUN_NUMBER` in CI** — not from
    `common.json.build`. The value in `common.json` is a static fallback for
    local dev. CI runs will have an incrementing build number automatically.
 
@@ -288,7 +269,7 @@ The e2e workflow and the bake Dockerfile both invoke `node scripts/build-pipelin
 directly; env-var validation lives in the orchestrator.
 
 ### 3. Makefile update (DocumentServer repo) ✓ done
-`develop/setup/Makefile` calls `build-pipeline.js` (not grunt). Follow-up tracked in
+`develop/setup/Makefile` calls `build-pipeline.js`. Follow-up tracked in
 Euro-Office/DocumentServer#259: split into explicit `web-apps` / `web-apps-prod` /
 `web-apps-dev` (mode-in-recipe) targets so the build mode can't be flipped silently
 by the shell environment.
@@ -341,4 +322,4 @@ significant debugging to diagnose.
 | `.claude/findings/webpack5-bare-common-global-contract.md` | 58 files use bare `Common.*` — load-order invariant |
 | `.claude/findings/deploy-html-inline-ordering.md` | `deploy-html.js` must run before `inline-svgs.js` |
 | `.claude/findings/deploy-common-bugs.md` | Three bugs fixed in deploy-common.js: PRODUCT_VERSION, @@SRC_ROOT@@, inline coverage |
-| `.claude/findings/phase-e-gap3-deploy-resources.md` | Gap 3+4 design decisions, dead grunt config, all advisor review notes |
+| `.claude/findings/phase-e-gap3-deploy-resources.md` | Per-editor `main/resources` deploy — design decisions + advisor review notes |
