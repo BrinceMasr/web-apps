@@ -38,8 +38,6 @@ export const VENDORS = [
     { name: 'socketio',      src: 'socketio/socket.io.min.js',              dest: 'vendor/socketio/socket.io.min.js' },
     { name: 'xregexp',       src: 'xregexp/xregexp-all-min.js',             dest: 'vendor/xregexp/xregexp-all-min.js' },
     { name: 'underscore',    src: 'underscore/underscore-min.js',           dest: 'vendor/underscore/underscore-min.js' },
-    { name: 'fetch',         src: 'fetch/fetch.umd.js',                     dest: 'vendor/fetch/fetch.umd.js' },
-    { name: 'es6-promise',   src: 'es6-promise/es6-promise.auto.min.js',    dest: 'vendor/es6-promise/es6-promise.auto.min.js' },
 
     // ---- requirejs (minified before copy — deploy-common handles specially) ---
     { name: 'requirejs',     src: 'requirejs/require.js',                   dest: 'vendor/requirejs/require.js', minify: true },
