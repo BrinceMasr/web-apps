@@ -381,10 +381,7 @@ define([
                 me._isScrolling = false;
             }, 100);
 
-            var delta = (_.isUndefined(event.originalEvent)) ? event.wheelDelta : event.originalEvent.wheelDelta;
-            if (_.isUndefined(delta)) {
-                delta = event.deltaY;
-            }
+            var delta = event.deltaY !== undefined ? -event.deltaY : event.wheelDelta;
 
             if (me._ctrlPressedAtScrollStart && !event.altKey) {
                 if (delta < 0) {

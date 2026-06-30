@@ -523,7 +523,7 @@ define([
                 e.preventDefault();
                 e.stopImmediatePropagation();
             }
-            var forward = (e.deltaY || (e.detail && -e.detail) || e.wheelDelta) < 0;
+            var forward = e.deltaY > 0;
             this.onChangePreviewPage(forward);
         },
 

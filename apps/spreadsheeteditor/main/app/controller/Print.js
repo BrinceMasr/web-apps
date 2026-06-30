@@ -915,7 +915,7 @@ define([
             }
             this.printSettings.txtRangeTop.cmpEl.find('input:focus').blur();
             this.printSettings.txtRangeLeft.cmpEl.find('input:focus').blur();
-            var forward = (e.deltaY || (e.detail && -e.detail) || e.wheelDelta) < 0;
+            var forward = e.deltaY > 0;
             this.onChangePreviewPage(forward);
         },
 
