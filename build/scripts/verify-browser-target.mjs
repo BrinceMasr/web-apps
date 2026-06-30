@@ -17,9 +17,9 @@
 /**
  * Check D — browser-target consistency gate (data-driven).
  *
- * The contracts live in build/browser-floor.mjs (TARGET_CONTRACTS, REQUIRED_ENGINES);
- * this script is a generic runner. To add a config consumer or a required engine,
- * edit the data in browser-floor.mjs — never this file.
+ * The contracts live in build/browser-floor.manifest.mjs (TARGET_CONTRACTS,
+ * REQUIRED_ENGINES); this script is a generic runner. To add a config consumer or a
+ * required engine, edit the manifest — never this file.
  *
  * Asserts:
  *   1. framework7-react/package.json has no `browserslist` key (floor lives only in
@@ -37,7 +37,8 @@
 import fs   from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { TARGET_CONTRACTS, REQUIRED_ENGINES, ESBUILD_TARGET, BROWSERSLIST } from '../browser-floor.mjs';
+import { ESBUILD_TARGET, BROWSERSLIST }       from '../browser-floor.mjs';
+import { TARGET_CONTRACTS, REQUIRED_ENGINES } from '../browser-floor.manifest.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT      = path.resolve(__dirname, '../..');
@@ -57,7 +58,12 @@ if (pkg.browserslist) {
 
 // 2. Each consumer imports the source AND wires the floor via the named export.
 for (const c of TARGET_CONTRACTS) {
-    const src = fs.readFileSync(path.join(ROOT, c.file), 'utf8');
+    const abs = path.join(ROOT, c.file);
+    if (!fs.existsSync(abs)) {
+        fail(`${c.file} — config missing or moved (update TARGET_CONTRACTS in browser-floor.manifest.mjs)`);
+        continue;
+    }
+    const src = fs.readFileSync(abs, 'utf8');
     if (!src.includes('browser-floor.mjs')) {
         fail(`${c.file} — does not import browser-floor.mjs`);
     } else if (!c.wires.test(src)) {
