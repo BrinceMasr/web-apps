@@ -21,14 +21,6 @@
     "build-visio": "cross-env NODE_ENV=development TARGET_EDITOR=visio node ./build/build.js"
   },
   "type": "module",
-  "browserslist": [
-    "Android >= 7",
-    "IOS >= 11",
-    "Safari >= 11",
-    "Chrome >= 49",
-    "Firefox >= 31",
-    "Samsung >= 5"
-  ],
   "dependencies": {
     "dom7": "^4.0.6",
     "framework7": "^8.3.4",

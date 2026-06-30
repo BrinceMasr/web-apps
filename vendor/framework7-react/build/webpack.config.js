@@ -5,6 +5,7 @@ import MiniCssExtractPlugin from "mini-css-extract-plugin";
 import { EsbuildPlugin } from 'esbuild-loader';
 // import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
 import { themeGlobalVars, themeDefines } from '../../../build/theme.config.mjs';
+import { ESBUILD_TARGET } from '../../../build/browser-floor.mjs';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from "url";
@@ -81,7 +82,7 @@ const config = {
     //   }
     // },
     minimizer: [
-      new EsbuildPlugin({ target: 'es2015', css: true }),
+      new EsbuildPlugin({ target: ESBUILD_TARGET, css: true, drop: env === 'production' ? ['console', 'debugger'] : [] }),
     ],
     moduleIds: 'deterministic',
   },
