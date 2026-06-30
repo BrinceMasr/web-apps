@@ -110,11 +110,13 @@ if (!SKIP_MOBILE) {
         const base = `apps/${ed}/mobile`;
         checkFile(`${base}/index.html`);
         checkFile(`${base}/index_loader.html`);
+        checkFile(`${base}/dist/js/app.js`);   // stable unhashed JS entry — checkDir alone would pass on a chunk/.map-only dist
         checkDir(`${base}/dist`);
         checkDir(`${base}/css`);
         checkDir(`${base}/locale`);
         // Defense-in-depth: assert the hashed CSS href in index.html actually exists.
-        // Only CSS is hashed (JS is always dist/js/app.js — covered by checkDir above).
+        // CSS is contenthash-named (parse the href); the JS entry is the stable
+        // dist/js/app.js asserted above.
         const indexAbs = path.join(BUILD_OUT, base, 'index.html');
         if (fs.existsSync(indexAbs)) {
             const html = fs.readFileSync(indexAbs, 'utf8');

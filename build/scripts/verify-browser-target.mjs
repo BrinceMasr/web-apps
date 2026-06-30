@@ -17,9 +17,11 @@
 /**
  * Check D — browser target consistency gate.
  *
- * Asserts that no mobile build config carries a hardcoded browser target and
- * that all consumers import from browser-floor.mjs (the single source of truth).
- * Fails the build if a literal target is re-introduced.
+ * Asserts that all mobile build configs import the target from browser-floor.mjs
+ * (the single source of truth) and that none re-introduces a hardcoded target
+ * *literal* — a string ('es2015', 'esnext'), an array (['safari15']) or an object.
+ * This is a static-source check: it proves the import exists and no target literal
+ * is present, not that the imported value is the one actually wired in.
  *
  * Run as part of Phase 5 gates, after webpack (BUILD_ROOT not needed).
  */
@@ -68,20 +70,26 @@ for (const cfg of CONFIGS) {
     }
 }
 
-// ---- 3. No hardcoded ES-year target in webpack.config.js -------------------
+// ---- 3. No hardcoded target literal in webpack.config.js -------------------
+// Allowed form is `target: ESBUILD_TARGET` (a bare identifier). Any string or
+// array literal after `target:` is a hardcoded target — catches 'es2015',
+// 'esnext', "es6", ['safari15'], etc. (The only `target:` in the file is the
+// EsbuildPlugin one, so a bare-identifier value is unambiguously correct.)
 const wpSrc = fs.readFileSync(path.join(F7_DIR, 'build', 'webpack.config.js'), 'utf8');
-if (/target:\s*['"]es20\d{2}['"]/.test(wpSrc)) {
-    fail('vendor/framework7-react/build/webpack.config.js has a hardcoded ES-year target string — use ESBUILD_TARGET from browser-floor.mjs');
+if (/target:\s*(['"]|\[)/.test(wpSrc)) {
+    fail('vendor/framework7-react/build/webpack.config.js has a hardcoded target literal — use ESBUILD_TARGET from browser-floor.mjs');
 } else {
-    ok('webpack.config.js has no hardcoded ES-year target');
+    ok('webpack.config.js has no hardcoded target literal');
 }
 
-// ---- 4. No hardcoded browserslist string in babel.config.js ----------------
+// ---- 4. No hardcoded targets literal in babel.config.js --------------------
+// Allowed form is `targets: BROWSERSLIST`. Any string, array or object literal
+// after `targets:` is a hardcoded target.
 const babelSrc = fs.readFileSync(path.join(F7_DIR, 'babel.config.js'), 'utf8');
-if (/targets:\s*['"]/.test(babelSrc)) {
-    fail('vendor/framework7-react/babel.config.js has a hardcoded targets string — use BROWSERSLIST from browser-floor.mjs');
+if (/targets:\s*(['"]|\[|\{)/.test(babelSrc)) {
+    fail('vendor/framework7-react/babel.config.js has a hardcoded targets literal — use BROWSERSLIST from browser-floor.mjs');
 } else {
-    ok('babel.config.js has no hardcoded targets string');
+    ok('babel.config.js has no hardcoded targets literal');
 }
 
 // ---- 5. ESBUILD_TARGET and BROWSERSLIST have consistent Safari floor --------
