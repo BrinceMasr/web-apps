@@ -131,8 +131,7 @@ define([
             }, this));
             Common.NotificationCenter.on('margins:update', _.bind(this.onUpdateLastCustomMargins, this));
 
-            var eventname = 'wheel';
-            this.printSettings.$previewBox.on(eventname, _.bind(this.onPreviewWheel, this));
+            this.printSettings.$previewBox[0].addEventListener('wheel', _.bind(this.onPreviewWheel, this), {passive: false});
         },
 
         setMode: function (mode) {
