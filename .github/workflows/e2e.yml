@@ -88,7 +88,6 @@ jobs:
           BUILD_ROOT: ${{ github.workspace }}/web-apps/deploy
           THEME: euro-office
           PRODUCT_VERSION: ${{ steps.ver.outputs.product_version }}
-          SKIP_MOBILE: '1'
         run: |
           npm install
           ( cd ../translation && python3 merge_and_check.py )
