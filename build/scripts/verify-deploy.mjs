@@ -110,6 +110,11 @@ for (const ed of MOBILE_EDITORS) {
     checkFile(`${base}/dist/js/app.js`);   // stable unhashed JS entry — checkDir alone would pass on a chunk/.map-only dist
     checkDir(`${base}/dist`);
     checkDir(`${base}/css`);
+    // framework7 stylesheets are CopyWebpackPlugin static copies loaded via a JS
+    // load_stylesheet() call, not a <link href> — invisible to the href scan below,
+    // and checkDir passes on any CSS file. Assert them explicitly.
+    checkFile(`${base}/css/framework7.css`);
+    checkFile(`${base}/css/framework7-rtl.css`);
     checkDir(`${base}/locale`);
     // Defense-in-depth: assert the hashed CSS href in index.html actually exists.
     // CSS is contenthash-named (parse the href); the JS entry is the stable
