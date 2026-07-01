@@ -26,13 +26,12 @@
 //   BUILD_ROOT       default: ../deploy (matches grunt's default)
 //   BUILD_NUMBER     default: GITHUB_RUN_NUMBER, then common.json.build
 //   THEME            default: default
-//   SKIP_MOBILE      set to 1 to skip framework7-react builds (~50s saved)
 //
 // Phase layout (wall-clock optimised):
 //   Phase 1 — all parallel:
 //     sprites.sh, deploy-common, deploy-html, deploy-reporter,
 //     deploy-embed, webpack ×6, mobile ×4
-//   Phase 2 — conditional on !SKIP_MOBILE (sequential after Phase 1):
+//   Phase 2 — sequential after Phase 1:
 //     deploy-mobile     (copies mobile output from source tree to BUILD_ROOT)
 //   Phase 3 — parallel (start as soon as Phase 2 done):
 //     deploy-resources  (deploys per-editor toolbar/icons.svg)
@@ -71,8 +70,6 @@ const BUILD_NUMBER = String(
 
 const THEME = process.env.THEME || 'default';
 
-const SKIP_MOBILE = process.env.SKIP_MOBILE === '1';
-
 // Default every child to production so mobile (webpack.config.js defaults to
 // 'development') and desktop (defaults to 'production') agree — without this the
 // pipeline could silently emit a dev mobile bundle. Overridable: NODE_ENV=development.
@@ -86,6 +83,9 @@ const CHILD_ENV = {
     BUILD_NUMBER,
     THEME,
     NODE_ENV,
+    // Never inherit watch mode from the parent shell — a watching mobile child
+    // (webpack.config.js: watch === WATCH==='1') never exits and hangs the pipeline.
+    WATCH: '0',
 };
 
 // ---- output helpers ---------------------------------------------------------
@@ -235,7 +235,6 @@ async function main() {
         `  PRODUCT_VERSION  ${PRODUCT_VERSION}`,
         `  BUILD_NUMBER     ${BUILD_NUMBER}`,
         `  THEME            ${THEME}`,
-        `  SKIP_MOBILE      ${SKIP_MOBILE}`,
         `  NODE_ENV         ${NODE_ENV === 'production'
             ? GREEN(NODE_ENV)
             : RED(`${NODE_ENV}  ⚠ DEV BUILD — minifier off; not for deploy or fix-validation`)}`,
@@ -265,28 +264,26 @@ async function main() {
 
     // Mobile: npm install first (sequential), then 4 editors in parallel.
     // Run as a pre-phase so all 4 editor tasks appear individually in the summary.
-    if (!SKIP_MOBILE) {
-        const install = await runTask(task('mobile:install', 'npm',
-            ['install', '--include=dev', '--production=false'],
-            { cwd: FRAMEWORK7_DIR }
-        )).promise;
-        if (install.code !== 0) {
-            process.stderr.write(RED(`\n✗ mobile:install failed — aborting\n`));
-            process.exit(1);
-        }
-        MOBILE_EDITORS.forEach(editor =>
-            phase1Tasks.push(task(`mobile:${editor}`, node, ['build/build.js'],
-                { cwd: FRAMEWORK7_DIR, env: { TARGET_EDITOR: editor } } // NODE_ENV now in CHILD_ENV
-            ))
-        );
+    const install = await runTask(task('mobile:install', 'npm',
+        ['install', '--include=dev', '--production=false'],
+        { cwd: FRAMEWORK7_DIR }
+    )).promise;
+    if (install.code !== 0) {
+        process.stderr.write(RED(`\n✗ mobile:install failed — aborting\n`));
+        process.exit(1);
     }
+    MOBILE_EDITORS.forEach(editor =>
+        phase1Tasks.push(task(`mobile:${editor}`, node, ['build/build.js'],
+            { cwd: FRAMEWORK7_DIR, env: { TARGET_EDITOR: editor } } // NODE_ENV now in CHILD_ENV
+        ))
+    );
 
     const p1 = await phase('Phase 1 — parallel', phase1Tasks);
 
-    // ---- phase 2: deploy-mobile (conditional) --------------------------------
+    // ---- phase 2: deploy-mobile ----------------------------------------------
     // Must run before deploy-theme-images: both write to <editor>/mobile/resources/img/
     // and theme images must win the overlay (deploy-theme-images.js:69).
-    const pMobile = SKIP_MOBILE ? [] : await phase('Phase 2 — mobile deploy', [
+    const pMobile = await phase('Phase 2 — mobile deploy', [
         task('deploy-mobile', node, ['scripts/deploy-mobile.js']),
     ]);
 
@@ -318,7 +315,7 @@ async function main() {
 
     // ---- summary -------------------------------------------------------------
 
-    const all = [...p0, ...p1, ...pMobile, ...p2, ...p3, ...p4];
+    const all = [...p0, install, ...p1, ...pMobile, ...p2, ...p3, ...p4];
     const wallMs = Date.now() - wallStart;
 
     const longestLabel = Math.max(...all.map(r => r.label.length));

@@ -55,6 +55,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            web-apps/build/package-lock.json
+            web-apps/vendor/framework7-react/npm-shrinkwrap.json
 
       # Mirrors web-apps.bake.Dockerfile so the overlay matches the shipped build.
       - name: Install build prerequisites
@@ -88,7 +92,6 @@ jobs:
           BUILD_ROOT: ${{ github.workspace }}/web-apps/deploy
           THEME: euro-office
           PRODUCT_VERSION: ${{ steps.ver.outputs.product_version }}
-          SKIP_MOBILE: '1'
         run: |
           npm install
           ( cd ../translation && python3 merge_and_check.py )
