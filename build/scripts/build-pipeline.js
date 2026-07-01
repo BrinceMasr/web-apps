@@ -83,6 +83,9 @@ const CHILD_ENV = {
     BUILD_NUMBER,
     THEME,
     NODE_ENV,
+    // Never inherit watch mode from the parent shell — a watching mobile child
+    // (webpack.config.js: watch === WATCH==='1') never exits and hangs the pipeline.
+    WATCH: '0',
 };
 
 // ---- output helpers ---------------------------------------------------------
