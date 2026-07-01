@@ -14,7 +14,7 @@
  * "esbuild deferred for desktop" note).
  */
 
-export const BROWSERSLIST   = ['iOS >= 17', 'Safari >= 17', 'and_chr >= 111', 'not dead'];
+export const BROWSERSLIST   = ['iOS >= 17', 'Safari >= 17', 'chrome >= 111', 'not dead'];
 export const ESBUILD_TARGET = ['safari17', 'chrome111'];
 
 // The gate that enforces these values is data-driven from a sibling manifest:
