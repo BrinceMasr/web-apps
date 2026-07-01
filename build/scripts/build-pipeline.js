@@ -315,7 +315,7 @@ async function main() {
 
     // ---- summary -------------------------------------------------------------
 
-    const all = [...p0, ...p1, ...pMobile, ...p2, ...p3, ...p4];
+    const all = [...p0, install, ...p1, ...pMobile, ...p2, ...p3, ...p4];
     const wallMs = Date.now() - wallStart;
 
     const longestLabel = Math.max(...all.map(r => r.label.length));
