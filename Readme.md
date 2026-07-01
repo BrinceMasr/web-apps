@@ -101,12 +101,6 @@ docker compose exec eo bash
 export BUILD_NUMBER=0 PRODUCT_VERSION=9.3.2 THEME=euro-office && cd /var/www/onlyoffice/web-apps-develop/build && node scripts/build-pipeline.js
 ```
 
-### Build Flags
-
-| Flag | Description |
-|------|-------------|
-| `SKIP_MOBILE=1` | Skip framework7-react mobile builds (~50s saved) |
-
 ### Environment Variables
 
 | Variable | Description |

@@ -17,10 +17,6 @@ the webpack 5 build system.
 cd /develop/web-apps/build
 PRODUCT_VERSION=9.2.1 BUILD_ROOT=/var/www/onlyoffice/documentserver THEME=euro-office \
   node scripts/build-pipeline.js
-
-# Skip mobile builds (saves ~50s — safe when you haven't touched framework7-react):
-SKIP_MOBILE=1 PRODUCT_VERSION=9.2.1 BUILD_ROOT=... THEME=euro-office \
-  node scripts/build-pipeline.js
 ```
 
 `make web-apps-dev` in the `eo` container calls the same pipeline via the
@@ -45,7 +41,7 @@ Phase 1 — all in parallel
   webpack ×6                  bundle app.js / code.js / app.css / locale per editor (desktop, Terser)
   mobile ×4                   framework7-react webpack builds into the SOURCE tree (word, cell, slide, visio; esbuild)
 
-Phase 2 — mobile deploy (skipped when SKIP_MOBILE=1)
+Phase 2 — mobile deploy
   deploy-mobile.js            copy mobile output (index.html → index.html + index_loader.html, dist/,
                               css/, locale/, resources/img/) from source tree → BUILD_ROOT for the 4
                               mobile editors. MUST precede deploy-theme-images' mobile img overlay.
@@ -59,7 +55,7 @@ Phase 4 — inline
 
 Phase 5 — gates (fail the build loudly)
   verify-bundles.mjs          scan built bundles for surviving {{TOKEN}} literals
-  verify-deploy.mjs           assert every required artifact exists (incl. mobile when !SKIP_MOBILE)
+  verify-deploy.mjs           assert every required artifact exists (incl. mobile)
   verify-browser-target.mjs   no hardcoded browser targets; configs import build/browser-floor.mjs
 ```
 
@@ -73,7 +69,6 @@ Phase 5 — gates (fail the build loudly)
 | `BUILD_ROOT` | **yes** | `../deploy` | Absolute path to DocumentServer output root. |
 | `BUILD_NUMBER` | no | `GITHUB_RUN_NUMBER` → `common.json.build` | Appended to version string in JS bundles. Auto-increments in CI via `GITHUB_RUN_NUMBER`. |
 | `THEME` | no | `default` | Theme directory name under `theme/`. EuroOffice uses `euro-office`. |
-| `SKIP_MOBILE` | no | `0` | Set to `1` to skip framework7-react builds + the Phase 2 mobile deploy (~50s). Safe when not touching mobile code. |
 | `NODE_ENV` | no | `production` | Build mode, forced onto every child. `development` = unminified, `console` kept, esbuild minifier off for mobile (so the ES target + `drop_console` do NOT run — never validate a fix on a dev build). The pipeline echoes the resolved mode in its banner (green prod / red DEV warning). |
 | `WATCH` | no | `0` | `1` = mobile webpack watch mode (live rebuild). Decoupled from `NODE_ENV`; for direct `build.js` runs only — the pipeline would hang on a watching child. |
 | `APP_COPYRIGHT` | no | auto | Copyright line in JS preamble. |
@@ -156,7 +151,7 @@ Preflight + Phase 5. Fail the build loudly rather than ship a silent defect:
 - `verify-replacements.mjs` — preflight: source-side string-replace idiom audit.
 - `verify-bundles.mjs` — scans built bundles for surviving `{{TOKEN}}` literals.
 - `verify-deploy.mjs` — asserts every required artifact exists (vendor/embed/main/forms;
-  mobile `index.html`/`dist`/`css`/`locale` when `!SKIP_MOBILE`).
+  mobile `index.html`/`dist`/`css`/`locale`).
 - `verify-browser-target.mjs` — fails if any webpack/babel/postcss config hardcodes a
   browser target instead of importing from `build/browser-floor.mjs`.
 

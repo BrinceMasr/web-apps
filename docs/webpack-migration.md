@@ -11,7 +11,7 @@ Branch: `build/webpack-migration`. Merged: 2026-06-15.
 
 **After**: Six webpack configs (one per editor) handle JS/CSS bundling. Six Node.js scripts handle everything else. A parallel orchestrator (`build/scripts/build-pipeline.js`) replaces the sequential Makefile chain.
 
-**CI time**: ~7 minutes → ~2 minutes (cold runner) — speedup comes from webpack's faster bundling vs r.js, plus `build-pipeline.js` running all Phase 1 tasks in parallel. **Local (eo container, SKIP_MOBILE=1, cold cache)**: ~101s.
+**CI time**: ~7 minutes → ~2 minutes (cold runner) — speedup comes from webpack's faster bundling vs r.js, plus `build-pipeline.js` running all Phase 1 tasks in parallel.
 
 **Editors covered**: documenteditor, spreadsheeteditor, presentationeditor, visioeditor, pdfeditor, forms.
 
@@ -26,7 +26,6 @@ PRODUCT_VERSION=9.2.1 BUILD_ROOT=/var/www/onlyoffice/documentserver THEME=euro-o
 # Or via Makefile — invoke inside the eo container from the host:
 docker exec eo make web-apps
 docker exec eo make web-apps-dev              # incremental (node_modules must exist)
-docker exec eo make web-apps-dev SKIP_MOBILE=1
 ```
 
 `PRODUCT_VERSION` is required and must match the SDK version (see gotcha #1 below).
