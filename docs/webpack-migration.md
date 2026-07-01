@@ -167,8 +167,10 @@ Three follow-up changes on top of the Phase E work. All committed to `build/webp
 **What:** `vendor/framework7-react/build/webpack.config.js` — the two-entry minimizer array and the duplicate `CssMinimizerPlugin` in the production plugins block are replaced with:
 
 ```js
-minimizer: [new EsbuildPlugin({ target: 'es2015', css: true })]
+minimizer: [new EsbuildPlugin({ target: ESBUILD_TARGET, css: true })]
 ```
+
+`ESBUILD_TARGET` is imported from `build/browser-floor.mjs` — the single source of truth for the mobile browser floor (see 2026-06-30 section below). The original commit used the literal `'es2015'`, which was subsequently found to downlevel i18next 25 class internals and crash the mobile editor; corrected in the same follow-up.
 
 `terser-webpack-plugin` and `css-minimizer-webpack-plugin` removed from `package.json`; `esbuild-loader ^4.0.0` added.
 
@@ -218,7 +220,31 @@ Run-to-run variance of ~10s is normal (Docker CPU scheduling, page cache). Both 
 
 `PRODUCT_VERSION` guard, `BUILD_NUMBER` resolution, and `BUILD_ROOT` defaulting all move inside the pipeline. `BUILD_ROOT` is set explicitly to `${{ github.workspace }}/web-apps/deploy` rather than computed in shell.
 
-The Tier-1 gates (verify-replacements preflight + verify-bundles/verify-deploy final gate) are now part of every CI run via the pipeline, rather than being separate steps that could be skipped or reordered.
+The Tier-1 gates (verify-replacements preflight + verify-bundles/verify-deploy/verify-browser-target final gate) are now part of every CI run via the pipeline, rather than being separate steps that could be skipped or reordered.
+
+---
+
+## Build system improvements — 2026-06-30
+
+### deploy-mobile.js — mobile editors now load (closes #258)
+
+**Why:** Phase E deleted grunt's `deploy-app-mobile` task without porting it. Mobile webpack writes its output to the source tree (`apps/<editor>/mobile/`), not to `BUILD_ROOT`. Nothing was copying it across — mobile editors returned a 404 skeleton.
+
+**What:** `build/scripts/deploy-mobile.js` bridges the gap. For each of the four mobile editors it copies `dist/`, `css/`, `locale/`, `index.html` → `index_loader.html`, and `resources/img/` into `BUILD_ROOT/web-apps/apps/<editor>/mobile/`. Wired as Phase 2 in `build-pipeline.js` (before `deploy-theme-images`, which overlays the same `resources/img/` path). `verify-deploy.mjs` asserts all six artifacts per editor (including a hash-href check on the CSS link in `index.html`).
+
+### Browser floor centralisation + i18next crash fix
+
+**Why (crash):** `f0e183749c` (EsbuildPlugin, 2026-06-17) set `target: 'es2015'`. Terser never transpiled — it only minified. esbuild at `es2015` downlevels the entire bundle: class fields, private methods, async/await, optional chaining. i18next 25 ships class-based `Translator`/`Interpolator`; esbuild's ES2015 class-field lowering mis-compiled an internal, producing `TypeError: we is not a function` on first use of `t()`. The crash was invisible until `deploy-mobile.js` let mobile actually load.
+
+**Why (fragmentation):** The mobile build had four independent target declarations (babel `> 0.25%, not dead`, esbuild `es2015`, postcss `browserslist` from `package.json` Chrome 49/iOS 11, and the decided Nextcloud floor ES2022) in four different files with no relationship between them. Any one could diverge silently and reintroduce the crash.
+
+**What:**
+- `build/browser-floor.mjs` — single source of truth: `BROWSERSLIST = ['iOS >= 17', 'Safari >= 17', 'chrome >= 111', 'not dead']` and `ESBUILD_TARGET = ['safari17', 'chrome111']`. Safari 17 ↔ ES2022; class fields not downleveled.
+- `vendor/framework7-react/build/webpack.config.js` — imports `ESBUILD_TARGET`, replaces literal
+- `vendor/framework7-react/babel.config.js` — imports `BROWSERSLIST`, replaces `'> 0.25%, not dead'`
+- `vendor/framework7-react/postcss.config.js` — imports `BROWSERSLIST`, passes to `postcssPresetEnv`
+- `vendor/framework7-react/package.json` — `browserslist` key deleted
+- `build/scripts/verify-browser-target.mjs` — Phase 5 gate: fails the build if any config carries a hardcoded target or omits the `browser-floor.mjs` import
 
 ---
 
@@ -236,14 +262,17 @@ The Tier-1 gates (verify-replacements preflight + verify-bundles/verify-deploy f
 | `build/webpack.{editor}.mjs` | Per-editor webpack config (6 files) |
 | `build/webpack.editor.factory.mjs` | Shared config factory |
 | `build/theme.config.mjs` | Brand token substitution — single source of truth |
+| `build/browser-floor.mjs` | Mobile browser floor — `BROWSERSLIST` + `ESBUILD_TARGET` (single source of truth) |
 | `build/scripts/build-pipeline.js` | Parallel build orchestrator |
 | `build/scripts/deploy-common.js` | Vendor scripts, API, SDK assets, apps-common HTML |
 | `build/scripts/deploy-html.js` | HTML template deployment |
+| `build/scripts/deploy-mobile.js` | Mobile artifact copy (source tree → BUILD_ROOT) |
 | `build/scripts/inline-svgs.js` | Build-time SVG/script inlining |
 | `build/scripts/deploy-resources.js` | Per-editor resource copy |
 | `build/scripts/deploy-reporter.js` | Presentation reporter view |
 | `build/scripts/deploy-theme-images.js` | Theme/brand images |
 | `build/scripts/deploy-embed.js` | Embed API builds |
+| `build/scripts/verify-browser-target.mjs` | Gate: no hardcoded targets; consumers import browser-floor.mjs |
 | `build/scripts/lib/build-utils.js` | Shared helpers |
 
 ---

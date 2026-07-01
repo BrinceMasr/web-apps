@@ -43,10 +43,13 @@ const BUILD_ROOT = process.env.BUILD_ROOT
     ? path.resolve(process.env.BUILD_ROOT)
     : path.resolve(__dirname, '../../deploy');
 
+const SKIP_MOBILE = process.env.SKIP_MOBILE === '1';
+
 const BUILD_OUT = path.join(BUILD_ROOT, 'web-apps');
 
-const EDITORS      = ['documenteditor', 'spreadsheeteditor', 'presentationeditor', 'visioeditor', 'pdfeditor'];
-const EMBED_EDITORS = ['documenteditor', 'spreadsheeteditor', 'presentationeditor', 'visioeditor'];
+const EDITORS        = ['documenteditor', 'spreadsheeteditor', 'presentationeditor', 'visioeditor', 'pdfeditor'];
+const EMBED_EDITORS  = ['documenteditor', 'spreadsheeteditor', 'presentationeditor', 'visioeditor'];
+const MOBILE_EDITORS = ['documenteditor', 'spreadsheeteditor', 'presentationeditor', 'visioeditor'];
 
 let failed = false;
 
@@ -100,6 +103,29 @@ for (const ed of EDITORS) {
 // ---- forms ------------------------------------------------------------------
 checkFile('apps/documenteditor/forms/app.js');
 checkFile('apps/documenteditor/forms/code.js');
+
+// ---- mobile (skipped when SKIP_MOBILE=1) ------------------------------------
+if (!SKIP_MOBILE) {
+    for (const ed of MOBILE_EDITORS) {
+        const base = `apps/${ed}/mobile`;
+        checkFile(`${base}/index.html`);
+        checkFile(`${base}/index_loader.html`);
+        checkFile(`${base}/dist/js/app.js`);   // stable unhashed JS entry — checkDir alone would pass on a chunk/.map-only dist
+        checkDir(`${base}/dist`);
+        checkDir(`${base}/css`);
+        checkDir(`${base}/locale`);
+        // Defense-in-depth: assert the hashed CSS href in index.html actually exists.
+        // CSS is contenthash-named (parse the href); the JS entry is the stable
+        // dist/js/app.js asserted above.
+        const indexAbs = path.join(BUILD_OUT, base, 'index.html');
+        if (fs.existsSync(indexAbs)) {
+            const html = fs.readFileSync(indexAbs, 'utf8');
+            for (const [, ref] of html.matchAll(/href="(css\/[^"]+\.css)"/g)) {
+                checkFile(`${base}/${ref}`);
+            }
+        }
+    }
+}
 
 if (failed) {
     console.error('verify-deploy: FAILED — missing or empty deployed artifacts');
