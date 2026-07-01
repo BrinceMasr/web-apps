@@ -33,7 +33,9 @@
 // must win, so deploy-mobile runs first).
 //
 // Copy-merge only — never wipes the destination. BUILD_ROOT must be set.
-// Soft-skips any editor whose mobile/index.html is absent.
+// Fails loudly if any editor's mobile/index.html is absent: in the pipeline all
+// four mobile editors always build, so a miss means a failed/killed build, not a
+// legitimate skip — better to fail here than let Phases 3-5 run on a partial deploy.
 
 const fs   = require('fs');
 const path = require('path');
@@ -96,12 +98,19 @@ function deployEditor(editor) {
     console.log(`deploy-mobile: ${editor} done`);
 }
 
+let missing = false;
 for (const editor of MOBILE_EDITORS) {
     if (!fs.existsSync(path.join(APPS_SRC, editor, 'mobile', 'index.html'))) {
-        console.log(`deploy-mobile: ${editor} — no mobile/index.html, skipping`);
+        console.error(`deploy-mobile: ${editor} — mobile/index.html missing (build failed or was killed)`);
+        missing = true;
         continue;
     }
     deployEditor(editor);
+}
+
+if (missing) {
+    console.error('deploy-mobile: FAILED — expected mobile output missing; not deploying a partial build');
+    process.exit(1);
 }
 
 console.log('deploy-mobile: all editors done');
