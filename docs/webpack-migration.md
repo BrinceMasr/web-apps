@@ -239,7 +239,7 @@ The Tier-1 gates (verify-replacements preflight + verify-bundles/verify-deploy/v
 **Why (fragmentation):** The mobile build had four independent target declarations (babel `> 0.25%, not dead`, esbuild `es2015`, postcss `browserslist` from `package.json` Chrome 49/iOS 11, and the decided Nextcloud floor ES2022) in four different files with no relationship between them. Any one could diverge silently and reintroduce the crash.
 
 **What:**
-- `build/browser-floor.mjs` — single source of truth: `BROWSERSLIST = ['iOS >= 17', 'Safari >= 17', 'and_chr >= 111', 'not dead']` and `ESBUILD_TARGET = ['safari17', 'chrome111']`. Safari 17 ↔ ES2022; class fields not downleveled.
+- `build/browser-floor.mjs` — single source of truth: `BROWSERSLIST = ['iOS >= 17', 'Safari >= 17', 'chrome >= 111', 'not dead']` and `ESBUILD_TARGET = ['safari17', 'chrome111']`. Safari 17 ↔ ES2022; class fields not downleveled.
 - `vendor/framework7-react/build/webpack.config.js` — imports `ESBUILD_TARGET`, replaces literal
 - `vendor/framework7-react/babel.config.js` — imports `BROWSERSLIST`, replaces `'> 0.25%, not dead'`
 - `vendor/framework7-react/postcss.config.js` — imports `BROWSERSLIST`, passes to `postcssPresetEnv`
