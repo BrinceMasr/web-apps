@@ -29,7 +29,7 @@
  *      matches `target: ESBUILD_TARGET`, so every hardcode form is caught WITHOUT the
  *      gate needing to know what a target literal looks like.
  *   3. every REQUIRED_ENGINES engine is present in both ESBUILD_TARGET and BROWSERSLIST
- *      (presence, not version — and_chr is latest-only, so pinning versions is meaningless).
+ *      (presence only — the gate does not validate version values in the queries).
  *
  * Run as part of Phase 5 gates (BUILD_ROOT not needed).
  */
