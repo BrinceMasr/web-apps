@@ -70,6 +70,17 @@
     }
 }
 
+// An <svg class="icon"> whose <use> lives inside a template conditional renders
+// empty when the condition is false. An empty inline svg has no width/height, so
+// it falls back to the 300x150 intrinsic replaced-element size and inflates its
+// row. An empty icon svg is never legitimate (nothing to paint), so collapse it
+// globally — this covers the non-spell-check rows in the language combo and
+// status-bar language menus, and any future empty-svg template.
+svg.icon:empty,
+svg.menu-item-icon:empty {
+    display: none;
+}
+
 .btn-category,
 .btn-options,
 .combo-dataview,
