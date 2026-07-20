@@ -343,22 +343,6 @@ define([
             return this;
         },
 
-        _onMouseWheel: function(e) {
-            var hidden  = this.checkInvisible(true),
-                forward = ((e.detail && -e.detail) || e.wheelDelta) < 0;
-
-            if (forward) {
-                if (hidden.last) {
-                    this.setTabVisible('forward');
-                }
-            } else {
-                if (hidden.first) {
-                    this.setTabVisible('backward');
-                }
-            }
-            Common.NotificationCenter.trigger('hints:clear');
-        },
-
         _onMouseWheelThrottled: function(e) {
             var delta = e.deltaY !== undefined
                 ? -(e.deltaMode === 1 ? e.deltaY * 30 : e.deltaY)
