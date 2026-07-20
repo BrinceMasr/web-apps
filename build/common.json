@@ -214,28 +214,6 @@
             }
         }
     },
-    "fetch": {
-        "clean": [
-            "$BUILD_ROOT/web-apps/vendor/fetch"
-        ],
-        "copy": {
-            "script": {
-                "src": "../vendor/fetch/fetch.umd.js",
-                "dest": "$BUILD_ROOT/web-apps/vendor/fetch/fetch.umd.js"
-            }
-        }
-    },
-    "es6-promise": {
-        "clean": [
-            "$BUILD_ROOT/web-apps/vendor/es6-promise"
-        ],
-        "copy": {
-            "script": {
-                "src": "../vendor/es6-promise/es6-promise.auto.min.js",
-                "dest": "$BUILD_ROOT/web-apps/vendor/es6-promise/es6-promise.auto.min.js"
-            }
-        }
-    },
     "requirejs": {
         "clean": [
             "$BUILD_ROOT/web-apps/vendor/requirejs"
@@ -282,8 +260,6 @@
             "deploy-jquery",
             "deploy-underscore",
             "deploy-iscroll",
-            "deploy-fetch",
-            "deploy-es6-promise",
             "deploy-common-embed",
             "deploy-monaco"
         ]
