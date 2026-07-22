@@ -344,10 +344,12 @@ define([
         },
 
         _onMouseWheelThrottled: function(e) {
-            var delta = e.deltaY !== undefined
+            var rawDelta = e.deltaY !== undefined
                 ? -(e.deltaMode === 1 ? e.deltaY * 30 : e.deltaY)
                 : ((e.detail && -e.detail) || e.wheelDelta);
-            if (Math.abs(delta) < 10) {
+
+            this._wheelAccum = (this._wheelAccum || 0) + rawDelta;
+            if (Math.abs(this._wheelAccum) < 10) {
                 return;
             }
 
@@ -356,6 +358,9 @@ define([
                 return;
             }
             this._lastWheelTime = now;
+
+            var delta = this._wheelAccum;
+            this._wheelAccum = 0;
 
             var hidden = this.checkInvisible(true);
 
