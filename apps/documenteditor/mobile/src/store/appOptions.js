@@ -47,6 +47,8 @@ export class storeAppOptions {
             setFavorite: action,
 
             customization: observable,
+
+            canRequestInsertImage: observable,
         });
     }
 
@@ -110,6 +112,8 @@ export class storeAppOptions {
         this.isDocReady = value;
     }
 
+    canRequestInsertImage = false;
+
     config = {};
     customization;
 
@@ -142,6 +146,7 @@ export class storeAppOptions {
         this.saveAsUrl = config.saveAsUrl;
         this.canAnalytics = false;
         this.canRequestClose = config.canRequestClose;
+        this.canRequestInsertImage = config.canRequestInsertImage === true;
         this.canCloseEditor = false;
 
         let canBack = false;
@@ -226,7 +231,7 @@ export class storeAppOptions {
         this.trialMode = params.asc_getLicenseMode();
 
         const type = /^(?:(pdf|djvu|xps|oxps))$/.exec(document.fileType);
-        
+
         this.canDownloadOrigin = false;
         this.canDownload = permissions.download !== false;
         this.canReader = (!type || typeof type[1] !== 'string');
@@ -240,12 +245,12 @@ export class storeAppOptions {
         if ( this.isLightVersion ) {
             this.canUseHistory = this.canReview = this.isReviewOnly = false;
         }
-        this.canUseReviewPermissions = this.canLicense && (!!permissions.reviewGroups || this.customization 
+        this.canUseReviewPermissions = this.canLicense && (!!permissions.reviewGroups || this.customization
             && this.customization.reviewPermissions && (typeof (this.customization.reviewPermissions) == 'object'));
         this.canUseCommentPermissions = this.canLicense && !!permissions.commentGroups;
         this.canUseUserInfoPermissions = this.canLicense && !!permissions.userInfoGroups;
         this.canUseReviewPermissions && AscCommon.UserInfoParser.setReviewPermissions(permissions.reviewGroups, this.customization.reviewPermissions);
-        this.canUseCommentPermissions && AscCommon.UserInfoParser.setCommentPermissions(permissions.commentGroups);    
+        this.canUseCommentPermissions && AscCommon.UserInfoParser.setCommentPermissions(permissions.commentGroups);
         this.canUseUserInfoPermissions && AscCommon.UserInfoParser.setUserInfoPermissions(permissions.userInfoGroups);
 
         this.canLiveView = !!params.asc_getLiveViewerSupport() && (this.config.mode === 'view') && !(type && typeof type[1] === 'string') && isSupportEditFeature;
