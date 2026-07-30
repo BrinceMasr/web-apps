@@ -303,9 +303,8 @@ define([
         },
 
         onChangeDarkMode: function (isdarkmode) {
-            // Same timer method/500ms duration guard as documenteditor's ViewTab.js (kept consistent with it on purpose).
-            // using setTimeout look hacky, but not blocking for the UX. 
-            // TODO: see how this can be improved in both editors
+            // same 500ms debounce as documenteditor's ViewTab.js already had
+            // TODO: look if is not a better solution
             if (!this._darkModeTimer) {
                 var me = this;
                 me._darkModeTimer = setTimeout(function() {
