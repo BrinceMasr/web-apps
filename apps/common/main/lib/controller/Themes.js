@@ -727,8 +727,6 @@ define([
 
         "canvas-background",
         "canvas-content-background",
-        "canvas-cell-background",
-        "canvas-cell-grid",
         "canvas-page-border",
 
         "canvas-ruler-background",
