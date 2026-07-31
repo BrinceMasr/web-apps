@@ -410,6 +410,7 @@ define([
                     Common.NotificationCenter.trigger('contenttheme:dark', this.isContentThemeDark());
                 } else {
                     this.api.asc_setContentDarkMode(false);
+                    Common.NotificationCenter.trigger('contenttheme:dark', false);
                 }
 
             const colors_obj = get_current_theme_colors();
