@@ -391,7 +391,7 @@ define([
                 this.btnDarkDocument = new Common.UI.Button({
                     cls: 'btn-toolbar x-huge icon-top',
                     iconCls: 'toolbar__icon btn-dark-mode',
-                    lock: [_set.inLightTheme],
+                    lock: [_set.inLightTheme, _set.lostConnect, _set.disableOnStart],
                     caption: this.textDarkDocument,
                     enableToggle: true,
                     dataHint: '1',
