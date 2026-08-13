@@ -3,23 +3,29 @@
 <head>
     <meta charset="utf-8">
     <title>Unit Tests</title>
-    <link rel="stylesheet" href="../../../../web-apps%20—%20копия/build/node_modules/mocha/mocha.css" type="text/css" media="screen" title="no title" charset="utf-8">
+    <link rel="stylesheet" href="../../../build/node_modules/mocha/mocha.css" type="text/css" media="screen" title="no title" charset="utf-8">
 </head>
 <body>
 <div id="mocha"></div>
-<script src="../../../../web-apps%20—%20копия/build/node_modules/mocha/mocha.js" type="text/javascript" charset="utf-8"></script>
-<script src="../../../../web-apps%20—%20копия/vendor/requirejs/require.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../build/node_modules/mocha/mocha.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../vendor/requirejs/require.js" type="text/javascript" charset="utf-8"></script>
 
-<script type="text/javascript" charset="utf-8">
+<script type="module">
+    // chai 5.x ships ESM only, so it cannot be pulled in by requirejs.
+    // Import it here and register it under the id the test files already use,
+    // so define(['chai']) and require('chai') keep working unchanged.
+    import * as chai from '../../../build/node_modules/chai/chai.js';
+    window.chai = chai;
+    define('chai', [], function () { return chai; });
+
     // Partial config file
     require.config({
         // Base URL relative to the test runner
         // Paths are relative to this
-        baseUrl: '../../apps/',
+        baseUrl: '../../../apps/',
         paths: {
             // Testing libs
             'common'            : 'common',
-            'chai'              : '../build/node_modules/chai/chai',
             'jquery'            : '../vendor/jquery/jquery.min',
             'underscore'        : '../vendor/underscore/underscore',
             'backbone'          : '../vendor/backbone/backbone',
@@ -64,8 +70,7 @@
 
     // You can do this in the grunt config for each mocha task, see the `options` config
     mocha.setup({
-        ui: 'bdd',
-        ignoreLeaks: true
+        ui: 'bdd'
     });
 
     // Protect from barfs
@@ -79,11 +84,23 @@
         mocha.run();
     };
 
-    require([
-        '../test/common',
-        './main/lib/util/utils.js',
-        '../../test/common/main/lib/component/Button.js'
-    ], runMocha);
+    // The app modules under test read $, _ and Backbone as globals rather than
+    // declaring them as dependencies, so requirejs is free to evaluate them
+    // before the vendor libs land. Load the globals first, then the tests.
+    require(['jquery', 'underscore', 'backbone'], function ($, _, Backbone) {
+        // underscore's UMD build registers itself as an AMD module and leaves
+        // no global behind, so publish the three the app modules expect.
+        window.$ = window.jQuery = $;
+        window._ = _;
+        window.Backbone = Backbone;
+
+        require([
+            '../test/unit-tests/common',
+            './main/lib/util/utils.js',
+            './main/lib/component/Button.js',
+            './main/lib/util/SmartPicker.js'
+        ], runMocha);
+    });
 </script>
 </body>
 </html>

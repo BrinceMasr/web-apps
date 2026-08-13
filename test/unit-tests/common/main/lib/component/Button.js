@@ -35,8 +35,8 @@
 
 define([
     'backbone',
-    '../../../../../../../web-apps — копия/apps/common/main/lib/component/Button.js',
-    '../../../../../apps/common/main/lib/component/Menu.js'
+    'common/main/lib/component/Button',
+    'common/main/lib/component/Menu'
 ],function() {
     var chai    = require('chai'),
         should  = chai.should();
@@ -70,7 +70,7 @@ define([
             button.caption.should.equal('update caption');
 
             // dom
-            assert.equal(button.cmpEl.find('button:first').andSelf().filter('button').text(), 'update caption', 'dom caption');
+            assert.equal(button.cmpEl.find('button:first').addBack().filter('button').text(), 'update caption', 'dom caption');
         });
 
         it('Button toggle', function(){

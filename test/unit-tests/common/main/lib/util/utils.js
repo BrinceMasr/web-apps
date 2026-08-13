@@ -34,7 +34,7 @@
  */
 
 define([
-    '../../../../../../../web-apps — копия/apps/common/main/lib/util/utils.js'
+    'common/main/lib/util/utils'
 ],function() {
     describe('Common.Utils.String', function(){
         it('Test format', function(){
