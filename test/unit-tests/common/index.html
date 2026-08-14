@@ -94,12 +94,16 @@
         window._ = _;
         window.Backbone = Backbone;
 
-        require([
-            '../test/unit-tests/common',
-            './main/lib/util/utils.js',
-            './main/lib/component/Button.js',
-            './main/lib/util/SmartPicker.js'
-        ], runMocha);
+        // The test setup module publishes assert/expect and stubs the ambient
+        // Common.* state the components read at render time. A flat require
+        // array would let requirejs evaluate whichever module lands first, so
+        // wait for the setup to finish before the tests are pulled in.
+        require(['../test/unit-tests/common'], function () {
+            require([
+                './main/lib/util/utils.js',
+                './main/lib/component/Button.js'
+            ], runMocha);
+        });
     });
 </script>
 </body>
