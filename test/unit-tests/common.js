@@ -33,8 +33,29 @@
 
 // Include and setup all the stuff for testing
 define([
-    'chai'
+    'chai',
+    'backbone'
 ],function(chai) {
     window.expect = chai.expect;
     window.assert = chai.assert;
+
+    // Components read a little ambient state at render time -- Button asks
+    // Common.UI.Scaling for the current ratio, and the menus ask Common.Locale
+    // for the text direction. Pulling in the real modules would drag 'core' and
+    // the whole application bootstrap into a unit test, so stub the two calls.
+    window.Common = window.Common || {};
+    Common.UI = Common.UI || {};
+    Common.UI.Scaling = Common.UI.Scaling || {};
+    if (!Common.UI.Scaling.currentRatio) {
+        Common.UI.Scaling.currentRatio = function() { return 1; };
+    }
+    Common.Locale = Common.Locale || {};
+    if (!Common.Locale.isCurrentLanguageRtl) {
+        Common.Locale.isCurrentLanguageRtl = function() { return false; };
+    }
+    // Components subscribe to app-wide events (uitheme:changed, modal:close)
+    // on render. Backbone.Events is the same thing the application installs.
+    if (!Common.NotificationCenter) {
+        Common.NotificationCenter = _.extend({}, Backbone.Events);
+    }
 });
