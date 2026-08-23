@@ -79,10 +79,15 @@ function deploySDK() {
     copyDirFiltered(path.join(SDKJS_ROOT, 'slide'), path.join(sdkOut, 'slide'),
         { include: ['sdk-*.js'] });
 
-    // desktop: AllFonts.js
+    // desktop: AllFonts.js. Prefer the generated build output used by the
+    // container's AllFontsGen step when the source checkout has no prebuilt
+    // HtmlFileInternal copy.
+    const sourceAllFonts = path.join(SDKJS_ROOT, 'common', 'HtmlFileInternal', 'AllFonts.js');
+    const generatedAllFonts = path.join(BUILD_ROOT, 'sdkjs', 'common', 'AllFonts.js');
     copyFile(
-        path.join(SDKJS_ROOT, 'common', 'HtmlFileInternal', 'AllFonts.js'),
-        path.join(commonOut, 'AllFonts.js')
+        fs.existsSync(sourceAllFonts) ? sourceAllFonts : generatedAllFonts,
+        path.join(commonOut, 'AllFonts.js'),
+        { required: true }
     );
 
     console.log('deploy-common: sdk done');
