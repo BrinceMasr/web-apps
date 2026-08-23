@@ -391,8 +391,8 @@ define([
                 const type = shortcutActions[actionName];
                 this.actionsMap[type] = {
                     action: {
-                        name: this['txtLabel' + actionName],
-                        description: this['txtDescription' + actionName],
+                        name: this['txtLabel' + actionName] || actionName,
+                        description: this['txtDescription' + actionName] || actionName,
                         type: type,
                         isLocked: !unlockedTypes[type]
                     },

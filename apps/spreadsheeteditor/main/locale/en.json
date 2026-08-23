@@ -5292,5 +5292,16 @@
   "SSE.Views.WBProtection.txtSheetUnlockDescription": "Enter a password to unprotect sheet",
   "SSE.Views.WBProtection.txtSheetUnlockTitle": "Unprotect sheet",
   "SSE.Views.WBProtection.txtWBUnlockDescription": "Enter a password to unprotect workbook",
-  "SSE.Views.WBProtection.txtWBUnlockTitle": "Unprotect workbook"
+  "Common.Controllers.Shortcuts.txtDescriptionSameSelectedObjectsSize": "Make all selected drawing objects the same width and height as the first selected object.",
+  "Common.Controllers.Shortcuts.txtDescriptionSameSelectedObjectsWidth": "Make all selected drawing objects the same width as the first selected object.",
+  "Common.Controllers.Shortcuts.txtDescriptionSameSelectedObjectsHeight": "Make all selected drawing objects the same height as the first selected object.",
+  "Common.Controllers.Shortcuts.txtLabelSameSelectedObjectsSize": "Same selected objects size",
+  "Common.Controllers.Shortcuts.txtLabelSameSelectedObjectsWidth": "Same selected objects width",
+  "Common.Controllers.Shortcuts.txtLabelSameSelectedObjectsHeight": "Same selected objects height",
+  "SSE.Views.DocumentHolder.textShapeSameSize": "Same Size as First",
+  "SSE.Views.DocumentHolder.textShapeSameWidth": "Same Width as First",
+  "SSE.Views.DocumentHolder.textShapeSameHeight": "Same Height as First",
+  "Common.Views.CustomizeQuickAccessDialog.textSameSize": "Same Size as First",
+  "Common.Views.CustomizeQuickAccessDialog.textSameWidth": "Same Width as First",
+  "Common.Views.CustomizeQuickAccessDialog.textSameHeight": "Same Height as First"
 }

@@ -146,6 +146,7 @@ define([
                 this.toolbar.collapse();
             }, this));
             Common.NotificationCenter.on('oleedit:close', _.bind(this.onOleEditClose, this));
+            Common.NotificationCenter.on('quickaccess:command', _.bind(this.onQuickAccessCommand, this));
             Common.NotificationCenter.on('tab:set-active', _.bind(function(action, needUnfold){
                 this.toolbar.setTab(action);
                 needUnfold && this.onChangeViewMode(null, false, true);
@@ -3381,6 +3382,9 @@ define([
             var objcount = this.api.asc_getSelectedDrawingObjectsCount();
             toolbar.btnImgAlign.menu.items[7].setDisabled(objcount<3);
             toolbar.btnImgAlign.menu.items[8].setDisabled(objcount<3);
+            toolbar.btnImgAlign.menu.items[10].setDisabled(objcount<2);
+            toolbar.btnImgAlign.menu.items[11].setDisabled(objcount<2);
+            toolbar.btnImgAlign.menu.items[12].setDisabled(objcount<2);
  
             toolbar.lockToolbar(Common.enumLock.cantMergeShape, !this.api.asc_canMergeSelectedShapes(), { array: [toolbar.btnShapesMerge] });
 
@@ -5245,12 +5249,28 @@ define([
                 } else if (item.value == 6) {
                     this.api.asc_DistributeSelectedDrawingObjectHor();
                     Common.component.Analytics.trackEvent('ToolBar', 'Distribute');
-                } else if (item.value == 7){
+                } else if (item.value == 7) {
                     this.api.asc_DistributeSelectedDrawingObjectVer();
                     Common.component.Analytics.trackEvent('ToolBar', 'Distribute');
+                } else if (item.value >= 8 && item.value <= 10) {
+                    this.api.asc_setSelectedDrawingObjectSize(item.value - 8);
+                    Common.component.Analytics.trackEvent('ToolBar', 'Objects Size');
                 }
             }
             Common.NotificationCenter.trigger('edit:complete', this.toolbar);
+        },
+
+        onQuickAccessCommand: function(command) {
+            if (!this.api) {
+                return;
+            }
+            var sizeType = command === 'sse-same-width' ? 1 : command === 'sse-same-height' ? 2 : command === 'sse-same-size' ? 0 : null;
+            if (sizeType === null) {
+                return;
+            }
+            this.api.asc_setSelectedDrawingObjectSize(sizeType);
+            Common.NotificationCenter.trigger('edit:complete', this.toolbar);
+            Common.component.Analytics.trackEvent('ToolBar', 'Quick Access Objects Size');
         },
 
         onBeforeShapesMerge: function() {

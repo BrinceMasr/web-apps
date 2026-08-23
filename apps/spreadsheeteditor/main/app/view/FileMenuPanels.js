@@ -1425,13 +1425,17 @@ define([], function () {
                 showSave: this.mode.showSaveButton && Common.UI.LayoutManager.isElementVisible('header-save'),
                 showPrint: this.mode.canPrint && this.mode.twoLevelHeader,
                 showQuickPrint: this.mode.canQuickPrint && this.mode.twoLevelHeader,
+                showObjectSizeActions: true,
                 mode: this.mode,
                 props: {
                     save: Common.localStorage.getBool('sse-quick-access-save', true),
                     print: Common.localStorage.getBool('sse-quick-access-print', true),
                     quickPrint: Common.localStorage.getBool('sse-quick-access-quick-print', true),
                     undo: Common.localStorage.getBool('sse-quick-access-undo', true),
-                    redo: Common.localStorage.getBool('sse-quick-access-redo', true)
+                    redo: Common.localStorage.getBool('sse-quick-access-redo', true),
+                    sameSize: Common.localStorage.getBool('sse-quick-access-same-size', true),
+                    sameWidth: Common.localStorage.getBool('sse-quick-access-same-width', true),
+                    sameHeight: Common.localStorage.getBool('sse-quick-access-same-height', true)
                 }
             });
             this.dlgQuickAccess.show();

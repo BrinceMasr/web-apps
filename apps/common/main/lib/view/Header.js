@@ -354,6 +354,25 @@ define([
                 this.btnStartOver[props.startOver ? 'show' : 'hide']();
                 Common.localStorage.setBool(this.appPrefix + 'quick-access-start-over', props.startOver);
             }
+            if (props.sameSize !== undefined || props.sameWidth !== undefined || props.sameHeight !== undefined) {
+                var sizeActions = {
+                    sameSize: 'sse-same-size',
+                    sameWidth: 'sse-same-width',
+                    sameHeight: 'sse-same-height'
+                };
+                for (var sizeProp in sizeActions) {
+                    if (props[sizeProp] === undefined) {
+                        continue;
+                    }
+                    Common.localStorage.setBool(this.appPrefix + 'quick-access-' + sizeProp.replace('same', 'same-').toLowerCase(), props[sizeProp]);
+                    if (this.btnQuickAccess && this.btnQuickAccess.menu) {
+                        var item = _.find(this.btnQuickAccess.menu.items, function(menuItem) {
+                            return menuItem.value === sizeActions[sizeProp];
+                        });
+                        item && item.setVisible(props[sizeProp]);
+                    }
+                }
+            }
             Common.NotificationCenter.trigger('edit:complete');
 
             if ( caller && caller == 'header' )
@@ -527,6 +546,20 @@ define([
                         checkable: true
                     });
                 }
+                if (isSSEEditor) {
+                    arr.push({
+                        caption: me.textShapeSameSize || 'Same Size as First',
+                        value: 'sse-same-size'
+                    });
+                    arr.push({
+                        caption: me.textShapeSameWidth || 'Same Width as First',
+                        value: 'sse-same-width'
+                    });
+                    arr.push({
+                        caption: me.textShapeSameHeight || 'Same Height as First',
+                        value: 'sse-same-height'
+                    });
+                }
                 me.btnQuickAccess.setMenu(new Common.UI.Menu({
                     cls: 'ppm-toolbar',
                     style: 'min-width: 110px;',
@@ -545,14 +578,23 @@ define([
                             item.setChecked(Common.localStorage.getBool(me.appPrefix + 'quick-access-undo', true), true);
                         } else if (item.value === 'redo') {
                             item.setChecked(Common.localStorage.getBool(me.appPrefix + 'quick-access-redo', true), true);
-                        }
-                        if (item.value === 'startover') {
+                        } else if (item.value === 'sse-same-size') {
+                            item.setVisible(Common.localStorage.getBool(me.appPrefix + 'quick-access-same-size', true));
+                        } else if (item.value === 'sse-same-width') {
+                            item.setVisible(Common.localStorage.getBool(me.appPrefix + 'quick-access-same-width', true));
+                        } else if (item.value === 'sse-same-height') {
+                            item.setVisible(Common.localStorage.getBool(me.appPrefix + 'quick-access-same-height', true));
+                        } else if (item.value === 'startover') {
                             item.setChecked(Common.localStorage.getBool(me.appPrefix + 'quick-access-start-over', true), true);
                         }
                     });
                 });
                 me.btnQuickAccess.menu.on('item:click', function (menu, item) {
                     var props = {};
+                    if (item.value.indexOf('sse-') === 0) {
+                        Common.NotificationCenter.trigger('quickaccess:command', item.value);
+                        return;
+                    }
                     switch (item.value) {
                         case 'save':
                             props.save = item.checked;

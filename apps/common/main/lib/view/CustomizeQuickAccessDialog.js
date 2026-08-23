@@ -56,6 +56,9 @@ define([], function () { 'use strict';
                     '<div class="padding-small" id="quick-access-chb-undo"></div>',
                     '<div class="padding-small" id="quick-access-chb-redo"></div>',
                     '<div class="padding-small" id="quick-access-chb-start-over" style="display:none;"></div>',
+                    '<div class="padding-small" id="quick-access-chb-same-size" style="display:none;"></div>',
+                    '<div class="padding-small" id="quick-access-chb-same-width" style="display:none;"></div>',
+                    '<div class="padding-small" id="quick-access-chb-same-height" style="display:none;"></div>',
                 '</div>'
             ].join('');
 
@@ -123,7 +126,29 @@ define([], function () { 'use strict';
                 });
                 this.focusedComponents.push(this.chStartOver);
                 this.chStartOver.show();
-            }    
+            }
+
+            if (this.options.showObjectSizeActions) {
+                this.chSameSize = new Common.UI.CheckBox({
+                    el: $('#quick-access-chb-same-size'),
+                    labelText: this.textSameSize,
+                    value: this.props.sameSize
+                });
+                this.chSameWidth = new Common.UI.CheckBox({
+                    el: $('#quick-access-chb-same-width'),
+                    labelText: this.textSameWidth,
+                    value: this.props.sameWidth
+                });
+                this.chSameHeight = new Common.UI.CheckBox({
+                    el: $('#quick-access-chb-same-height'),
+                    labelText: this.textSameHeight,
+                    value: this.props.sameHeight
+                });
+                this.focusedComponents.push(this.chSameSize, this.chSameWidth, this.chSameHeight);
+                this.chSameSize.show();
+                this.chSameWidth.show();
+                this.chSameHeight.show();
+            }
         },
 
         getFocusedComponents: function() {
@@ -142,7 +167,10 @@ define([], function () { 'use strict';
                     quickPrint: this.chQuickPrint ? this.chQuickPrint.getValue() === 'checked' : undefined,
                     undo: this.chUndo.getValue() === 'checked',
                     redo: this.chRedo.getValue() === 'checked',
-                    startOver: this.chStartOver ? this.chStartOver.getValue() === 'checked' : undefined
+                    startOver: this.chStartOver ? this.chStartOver.getValue() === 'checked' : undefined,
+                    sameSize: this.chSameSize ? this.chSameSize.getValue() === 'checked' : undefined,
+                    sameWidth: this.chSameWidth ? this.chSameWidth.getValue() === 'checked' : undefined,
+                    sameHeight: this.chSameHeight ? this.chSameHeight.getValue() === 'checked' : undefined
                 });
             }
 
@@ -151,6 +179,9 @@ define([], function () { 'use strict';
 
         textTitle: 'Customize quick access',
         textMsg: 'Check the commands that will be displayed on the Quick Access Toolbar',
+        textSameSize: 'Same Size as First',
+        textSameWidth: 'Same Width as First',
+        textSameHeight: 'Same Height as First',
         textSave: 'Save',
         textPrint: 'Print',
         textQuickPrint: 'Quick Print',

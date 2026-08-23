@@ -1088,6 +1088,19 @@ define([], function () {
                             caption: me.txtDistribVert,
                             iconCls: 'menu__icon btn-shape-distribute-vert',
                             value: 7
+                        },
+                        {caption: '--'},
+                        {
+                            caption: me.textShapeSameSize || 'Same Size as First',
+                            value: 8
+                        },
+                        {
+                            caption: me.textShapeSameWidth || 'Same Width as First',
+                            value: 9
+                        },
+                        {
+                            caption: me.textShapeSameHeight || 'Same Height as First',
+                            value: 10
                         }]
                 })
             });

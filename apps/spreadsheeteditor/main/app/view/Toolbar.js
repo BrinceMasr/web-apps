@@ -3777,6 +3777,19 @@ define([
                     caption: _holder_view.txtDistribVert,
                     iconCls: 'menu__icon btn-shape-distribute-vert',
                     value: 7
+                },
+                {caption: '--'},
+                {
+                    caption: _holder_view.textShapeSameSize || 'Same Size as First',
+                    value: 8
+                },
+                {
+                    caption: _holder_view.textShapeSameWidth || 'Same Width as First',
+                    value: 9
+                },
+                {
+                    caption: _holder_view.textShapeSameHeight || 'Same Height as First',
+                    value: 10
                 }]
             }));
 

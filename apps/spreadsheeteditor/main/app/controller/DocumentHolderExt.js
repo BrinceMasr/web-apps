@@ -1100,10 +1100,14 @@ define([], function () {
                     this.api.asc_DistributeSelectedDrawingObjectHor();
                     Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
                     Common.component.Analytics.trackEvent('DocumentHolder', 'Distribute');
-                } else if (item.value == 7){
+                } else if (item.value == 7) {
                     this.api.asc_DistributeSelectedDrawingObjectVer();
                     Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
                     Common.component.Analytics.trackEvent('DocumentHolder', 'Distribute');
+                } else if (item.value >= 8 && item.value <= 10) {
+                    this.api.asc_setSelectedDrawingObjectSize(item.value - 8);
+                    Common.NotificationCenter.trigger('edit:complete', this.documentHolder);
+                    Common.component.Analytics.trackEvent('DocumentHolder', 'Objects Size');
                 }
             }
         };
@@ -2341,6 +2345,9 @@ define([], function () {
                 var objcount = this.api.asc_getSelectedDrawingObjectsCount();
                 documentHolder.menuImageAlign.menu.items[7].setDisabled(objcount<3);
                 documentHolder.menuImageAlign.menu.items[8].setDisabled(objcount<3);
+                documentHolder.menuImageAlign.menu.items[10].setDisabled(objcount<2);
+                documentHolder.menuImageAlign.menu.items[11].setDisabled(objcount<2);
+                documentHolder.menuImageAlign.menu.items[12].setDisabled(objcount<2);
 
                 documentHolder.mnuShapeAdvanced.setVisible(isshapemenu && !isimagemenu && !ischartmenu && !ischeckboxmenu);
                 documentHolder.mnuShapeAdvanced.setDisabled(isObjLocked);
