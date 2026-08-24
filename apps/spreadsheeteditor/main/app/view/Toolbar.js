@@ -807,10 +807,10 @@ define([
                     tabs: [
                         { caption: me.textTabFile, action: 'file', extcls: 'canedit', layoutname: 'toolbar-file', haspanel:false, dataHintTitle: 'F'},
                         { caption: me.textTabHome, action: 'home', extcls: 'canedit', dataHintTitle: 'H'},
-                        { caption: me.textTabInsert, action: 'ins', extcls: 'canedit', dataHintTitle: 'I'},
-                        {caption: me.textTabLayout, action: 'layout', extcls: 'canedit', layoutname: 'toolbar-layout', dataHintTitle: 'L'},
-                        {caption: me.textTabFormula, action: 'formula', extcls: 'canedit', dataHintTitle: 'O'},
-                        {caption: me.textTabData, action: 'data', extcls: 'canedit', dataHintTitle: 'D'}
+                        { caption: me.textTabInsert, action: 'ins', extcls: 'canedit', dataHintTitle: 'N'},
+                        {caption: me.textTabPageLayout || me.textTabLayout, action: 'layout', extcls: 'canedit', layoutname: 'toolbar-layout', dataHintTitle: 'P'},
+                        {caption: me.textTabFormulas || me.textTabFormula, action: 'formula', extcls: 'canedit', dataHintTitle: 'M'},
+                        {caption: me.textTabData, action: 'data', extcls: 'canedit', dataHintTitle: 'A'}
                         // undefined, undefined, undefined, undefined
                     ]}
                 );

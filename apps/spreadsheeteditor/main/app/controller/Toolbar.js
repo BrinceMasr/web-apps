@@ -4985,10 +4985,10 @@ define([
             });
 
             if ( !config.isEditDiagram && !config.isEditMailMerge && !config.isEditOle ) {
-                var tab = {action: 'review', caption: me.toolbar.textTabCollaboration, layoutname: 'toolbar-collaboration', dataHintTitle: 'U'};
-                var $panel = me.getApplication().getController('Common.Controllers.ReviewChanges').createToolbarPanel();
-                if ($panel) {
-                    me.toolbar.addTab(tab, $panel, 6);
+                var tab = {action: 'review', caption: me.toolbar.textTabReview || me.toolbar.textTabCollaboration, layoutname: 'toolbar-collaboration', dataHintTitle: 'R'};
+                var reviewPanel = me.getApplication().getController('Common.Controllers.ReviewChanges').createToolbarPanel();
+                if (reviewPanel) {
+                    me.toolbar.addTab(tab, reviewPanel, 6);
                     me.toolbar.setVisible('review', (config.isEdit || config.canViewReview || config.canCoAuthoring && config.canComments) && Common.UI.LayoutManager.isElementVisible('toolbar-collaboration'));
                 }
             }
@@ -5003,15 +5003,6 @@ define([
                 me.toolbar.setApi(me.api);
 
                 if ( !config.isEditDiagram && !config.isEditMailMerge && !config.isEditOle ) {
-                    var drawtab = me.getApplication().getController('Common.Controllers.Draw');
-                    drawtab.setApi(me.api).setMode(config);
-                    $panel = drawtab.createToolbarPanel();
-                    if ($panel) {
-                        tab = {action: 'draw', caption: me.toolbar.textTabDraw, extcls: 'canedit', layoutname: 'toolbar-draw', dataHintTitle: 'C'};
-                        me.toolbar.addTab(tab, $panel, 2);
-                        me.toolbar.setVisible('draw', Common.UI.LayoutManager.isElementVisible('toolbar-draw'));
-                        Array.prototype.push.apply(me.toolbar.lockControls, drawtab.getView().getButtons());
-                    }
 
                     var datatab = me.getApplication().getController('DataTab');
                     datatab.setApi(me.api).setConfig({toolbar: me});
@@ -5076,15 +5067,13 @@ define([
                         me.toolbar.processPanelVisible(null, true);
                     }
 
-                    if ( config.canProtect ) {
-                        var tab = {action: 'protect', caption: me.toolbar.textTabProtect, layoutname: 'toolbar-protect', dataHintTitle: 'T'};
-                        var $panel = me.getApplication().getController('Common.Controllers.Protection').createToolbarPanel();
-                        if ($panel) {
-                            (config.isSignatureSupport || config.isPasswordSupport) && $panel.append($('<div class="separator long"></div>'));
+                    if (config.canProtect && reviewPanel) {
+                        var protectionPanel = me.getApplication().getController('Common.Controllers.Protection').createToolbarPanel();
+                        if (protectionPanel) {
+                            (config.isSignatureSupport || config.isPasswordSupport) && protectionPanel.append($('<div class="separator long"></div>'));
                             var wbtab = me.getApplication().getController('WBProtection');
-                            $panel.append(wbtab.createToolbarPanel());
-                            me.toolbar.addTab(tab, $panel, 7);
-                            me.toolbar.setVisible('protect', Common.UI.LayoutManager.isElementVisible('toolbar-protect'));
+                            protectionPanel.append(wbtab.createToolbarPanel());
+                            reviewPanel.append($('<div class="separator long"></div>')).append(protectionPanel);
                             Array.prototype.push.apply(me.toolbar.lockControls, wbtab.getView('WBProtection').getButtons());
                         }
                     }
@@ -5104,6 +5093,23 @@ define([
                     !editmode && !compactview && visible && Common.Utils.InternalSettings.set('toolbar-active-tab', 'view'); // need to activate later
                 }
                 config.isEdit && Array.prototype.push.apply(me.toolbar.lockControls, viewtab.getView('ViewTab').getButtons());
+                if (config.isEdit) {
+                    var powerUserTab = me.getApplication().getController('PowerUserTab');
+                    powerUserTab.setApi(me.api).setConfig({mode: config});
+                    $panel = powerUserTab.createToolbarPanel();
+                    if ($panel) {
+                        tab = {
+                            action: 'power-user',
+                            caption: me.toolbar.textTabPowerUser || 'Power User',
+                            extcls: 'canedit',
+                            layoutname: 'toolbar-power-user',
+                            dataHintTitle: 'U'
+                        };
+                        me.toolbar.addTab(tab, $panel, 9);
+                        me.toolbar.setVisible('power-user', true);
+                        Array.prototype.push.apply(me.toolbar.lockControls, powerUserTab.getView().getButtons());
+                    }
+                }
             }
         },
 

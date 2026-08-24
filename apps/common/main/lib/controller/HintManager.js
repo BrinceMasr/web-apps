@@ -97,7 +97,7 @@ Common.UI.HintManager = new(function() {
         _arrEnAlphabet = [],
         _arrQwerty = [],
         _arrEnQwerty = [],
-        _needShow = false,
+        _altKeyHandled = false,
         _hintVisible = false,
         _currentLevel = 0,
         _currentSection = document,
@@ -146,6 +146,13 @@ Common.UI.HintManager = new(function() {
             _isLockedKeyEvents = isLocked;
             _api.asc_enableKeyEvents(!isLocked);
         }
+    };
+
+    var _canActivateHints = function(e) {
+        return Common.Utils.InternalSettings.get(_appPrefix + "settings-show-alt-hints") && !e.shiftKey &&
+            e.keyCode == Common.UI.Keys.ALT && !Common.Utils.ModalWindow.isVisible() && _isDocReady && _arrAlphabet.length > 0 &&
+            !(window.PE && $('#pe-preview').is(':visible')) && !(Common.UI.ScreenReaderFocusManager && Common.UI.ScreenReaderFocusManager.isFocusMode()) &&
+            !(window.SSE && window.SSE.getController('Statusbar').getIsDragDrop());
     };
 
     var _showHints = function () {
@@ -494,9 +501,19 @@ Common.UI.HintManager = new(function() {
             _clearHints();
         });
         $(document).on('keyup', function(e) {
-            if ((e.keyCode == Common.UI.Keys.ALT || e.keyCode === 91) && _needShow && !(window.SSE && window.SSE.getController('Statusbar').getIsDragDrop())) {
+            if ((e.keyCode == Common.UI.Keys.ALT || e.keyCode === 91) && _altKeyHandled) {
                 e.preventDefault();
+                _altKeyHandled = false;
+            } else if (_hintVisible) {
+                e.preventDefault();
+            }
+        });
+        $(document).on('keydown', function(e) {
+            if (_canActivateHints(e)) {
+                e.preventDefault();
+                _altKeyHandled = true;
                 if (!_hintVisible) {
+                    // The next access key can arrive before Alt keyup, so lock SDK key events synchronously.
                     $('input:focus').blur(); // to change value in inputField
                     _currentLevel = ($('#file-menu-panel').is(':visible') || _isEditDiagram) ? 1 : 0;
                     _setCurrentSection();
@@ -504,17 +521,11 @@ Common.UI.HintManager = new(function() {
                 } else {
                     _hideHints();
                     _resetToDefault();
-                    if (_isLockedKeyEvents) {
-                        _isLockedKeyEvents = false;
-                        _api.asc_enableKeyEvents(true);
-                    }
+                    _lockedKeyEvents(false);
                 }
-            } else if (_hintVisible) {
-                e.preventDefault();
+                return;
             }
-            _needShow = false;
-        });
-        $(document).on('keydown', function(e) {
+
             if (_hintVisible) {
                 e.preventDefault();
                 if (e.keyCode == Common.UI.Keys.ESC ) {
@@ -638,9 +649,6 @@ Common.UI.HintManager = new(function() {
                 }
             }
 
-            _needShow = (Common.Utils.InternalSettings.get(_appPrefix + "settings-show-alt-hints") && !e.shiftKey &&
-                e.keyCode == Common.UI.Keys.ALT && !Common.Utils.ModalWindow.isVisible() && _isDocReady && _arrAlphabet.length > 0 &&
-                !(window.PE && $('#pe-preview').is(':visible')) && !(Common.UI.ScreenReaderFocusManager && Common.UI.ScreenReaderFocusManager.isFocusMode()));
             if (Common.Utils.InternalSettings.get(_appPrefix + "settings-show-alt-hints") && e.altKey && e.keyCode !== 115 && _isInternalEditorLoading) {
                 e.preventDefault();
             }
@@ -681,6 +689,7 @@ Common.UI.HintManager = new(function() {
     var _clearHints = function (isComplete, leaveLockedKeyEvents) {
         if (Common.Utils.isIE || Common.UI.isMac && Common.Utils.isGecko)
             return;
+        _altKeyHandled = false;
         _hintVisible && _hideHints();
         if (_currentHints.length > 0) {
             _resetToDefault();

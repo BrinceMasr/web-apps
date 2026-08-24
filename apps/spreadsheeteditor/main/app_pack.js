@@ -71,6 +71,7 @@ require([
     'spreadsheeteditor/main/app/view/GoalSeekStatusDlg',
     'spreadsheeteditor/main/app/view/DataValidationDialog',
     'spreadsheeteditor/main/app/view/FormulaWizard',
+    'spreadsheeteditor/main/app/view/PowerUserTab',
     'spreadsheeteditor/main/app/view/ParagraphSettingsAdvanced',
     'spreadsheeteditor/main/app/view/ImageSettingsAdvanced',
     'spreadsheeteditor/main/app/view/SlicerSettingsAdvanced',
