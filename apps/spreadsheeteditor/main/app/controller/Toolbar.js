@@ -2464,15 +2464,10 @@ define([
             this.api.asc_registerCallback('asc_onSelectionChanged',         _.bind(this.onApiSelectionChanged, this));
 
             var shortcuts = {
-                    'command+l,ctrl+l': function(e) {
-                        if ( me.editMode && !me._state.multiselect && me.appConfig.canModifyFilter && !me._state.wsLock) {
-                            var cellinfo = me.api.asc_getCellInfo(),
-                                filterinfo = cellinfo.asc_getAutoFilterInfo(),
-                                formattableinfo = cellinfo.asc_getFormatTableInfo();
-                            filterinfo = (filterinfo) ? filterinfo.asc_getIsAutoFilter() : null;
-                            if (filterinfo!==null && !formattableinfo) {
-                                me._setTableFormat(me.api.asc_getDefaultTableStyle());
-                            }
+                    'command+l,ctrl+l,command+t,ctrl+t': function(e) {
+                        if (me.api && me.editMode && !me._state.multiselect && me.appConfig.canModifyFilter && !me._state.wsLock) {
+                            // Excel treats Ctrl+L and Ctrl+T as equivalent table-creation commands.
+                            me._setTableFormat(me.api.asc_getDefaultTableStyle());
                         }
 
                         return false;
